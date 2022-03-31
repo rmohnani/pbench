@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 
 # Created by https://www.toptal.com/developers/gitignore/api/react,node
 # Edit at https://www.toptal.com/developers/gitignore?templates=react,node
@@ -157,3 +158,28 @@ thumb
 sketch
 
 # End of https://www.toptal.com/developers/gitignore/api/react,node
+=======
+# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+
+# dependencies
+/node_modules
+/.pnp
+.pnp.js
+
+# testing
+/coverage
+
+# production
+/build
+
+# misc
+.DS_Store
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+>>>>>>> ca49f1514 (New Dashboard codebase)

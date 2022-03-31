@@ -1,24 +1,17 @@
-import React, { useEffect } from 'react';
-import favicon from './assets/logo/favicon.ico';
-import './App.css';
-import MainLayout from "./modules/containers/MainLayout/index";
-import '@patternfly/patternfly/patternfly.css';
+import React from 'react'
+import { BrowserRouter as Router,Route,Routes } from 'react-router-dom'
+import { TableWithFavorite } from './modules/components/TableComponent'
 
-
-function App() {  
-  
-  useEffect(() => {
-    const faviconLogo = document.getElementById("favicon");
-    faviconLogo.setAttribute("href", favicon);
-  }, [])
-
- 
+function App() {
   return (
-    <div className="App">
-      Pbench Dashboard
-      <MainLayout />
-    </div> 
-  );
+    <>
+    <Router>
+      <Routes>
+    <Route exact path="/" element={<TableWithFavorite/>}/>
+    </Routes>
+    </Router>
+    </>
+  )
 }
 
-export default App;
+export default App
