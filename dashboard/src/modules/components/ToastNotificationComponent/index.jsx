@@ -42,4 +42,4 @@ const ToastComponent = () => {
     )
 }
 
-export default ToastComponent
+export default ToastComponent;

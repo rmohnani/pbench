@@ -9,6 +9,7 @@ const MainLayout = () => {
     const isLoading = useSelector(state => state.loading.isLoading);
     return (
         <>
+        
         {
             alerts && alerts.length > 0 &&
             <ToastComponent />
