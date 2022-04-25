@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
-import {useDispatch} from 'react-redux'
-import "./index.css";
+import { useDispatch } from "react-redux";
+import "./index.less";
 import {
   ToggleGroup,
   ToggleGroupItem,
@@ -21,21 +21,20 @@ import {
   Td,
 } from "@patternfly/react-table";
 import BarsIcon from "@patternfly/react-icons/dist/js/icons/bars-icon";
-import SearchBox from "../SearchComponent";
 import DatePickerWidget from "../DatePickerComponent";
-import Heading from "../HeadingComponent";
 import PathBreadCrumb from "../BreadCrumbComponent";
-import AlertMessage from "../AlertComponent";
 import NavItems from "../NavbarComponent";
-import EmptyTable from "../EmptyStateComponent";
 import moment from "moment";
-import { fetchPublicDatasets } from "../../../actions/fetchPublicDatasets";
+import { fetchPublicDatasets } from "../../../actions/publicControllerActions";
 import TablePagination from "../PaginationComponent";
 import { formatDate } from "../../../utils/dateFormatter";
-let startDate = formatDate(new Date(1990,10,4));
+import { LoginHint, EmptyTable, Heading, SearchBox } from "./common-components";
+
+let startDate = formatDate(new Date(1990, 10, 4));
 let endDate = formatDate(new Date());
 let controllerName = "";
 let dataArray = [];
+
 export const TableWithFavorite = () => {
   const columnNames = {
     controller: "Controller",
@@ -48,36 +47,47 @@ export const TableWithFavorite = () => {
   const [publicData, setPublicData] = useState([]);
   const [isSelected, setIsSelected] = useState("controllerListButton");
   const [isNavOpen, setIsNavOpen] = useState(false);
-  const [page,setPage]=useState(1);
-  const [perPage,setPerPage]=useState(10);
-  const dispatch=useDispatch();
+  const [page, setPage] = useState(1);
+  const [perPage, setPerPage] = useState(10);
+  const [loginHintVisible, setLoginHintVisible] = useState(true);
+
+  const dispatch = useDispatch();
   useEffect(() => {
-     dispatch(fetchPublicDatasets()).then((res) => {
+    dispatch(fetchPublicDatasets())
+      .then((res) => {
         dataArray = res.data;
         setPublicData(res.data);
-        setFavoriteRepoNames(JSON.parse(localStorage.getItem("favControllers")))
+        setFavoriteRepoNames(
+          JSON.parse(localStorage.getItem("favControllers"))
+        );
       })
       .catch((err) => {
         console.log(err);
       });
   }, []);
-  const markRepoFavorited = (repo, isFavoriting = true) =>{
-   const otherFavorites = favoriteRepoNames.filter((r) => r.name !== repo.name);
-      const newFavorite= isFavoriting ? [...otherFavorites, repo] : otherFavorites;
-      saveFavorites(newFavorite);
-      setFavoriteRepoNames(newFavorite);
-  }
-    const selectedArray =isSelected === "controllerListButton" ? publicData.slice((page-1)*(perPage),(page*perPage)) : favoriteRepoNames.slice((page-1)*(perPage),(page*perPage));
+  const markRepoFavorited = (repo, isFavoriting = true) => {
+    const otherFavorites = favoriteRepoNames.filter(
+      (r) => r.name !== repo.name
+    );
+    const newFavorite = isFavoriting
+      ? [...otherFavorites, repo]
+      : otherFavorites;
+    saveFavorites(newFavorite);
+    setFavoriteRepoNames(newFavorite);
+  };
+  const selectedArray =
+    isSelected === "controllerListButton"
+      ? publicData?.slice((page - 1) * perPage, page * perPage)
+      : favoriteRepoNames?.slice((page - 1) * perPage, page * perPage);
   const onNavToggle = () => {
     setIsNavOpen(!isNavOpen);
   };
   const isRepoFavorited = (repo) => {
-    for (let i = 0; i < favoriteRepoNames.length; i++) {
+    for (const element of favoriteRepoNames) {
       if (
-        repo.name === favoriteRepoNames[i].name &&
-        repo.controller === favoriteRepoNames[i].controller &&
-        repo.metadata["dataset.created"] ===
-          favoriteRepoNames[i].metadata["dataset.created"]
+        repo.name === element.name &&
+        repo.controller === element.controller &&
+        repo.metadata["dataset.created"] === element.metadata["dataset.created"]
       )
         return true;
     }
@@ -129,12 +139,12 @@ export const TableWithFavorite = () => {
     localStorage.setItem("favControllers", JSON.stringify(fav));
   };
   const Sidebar = (
-    <PageSidebar
-      nav={<NavItems />}
-      className="sidebar"
-      isNavOpen={isNavOpen}
-    />
+    <PageSidebar nav={<NavItems />} className="sidebar" isNavOpen={isNavOpen} />
   );
+  const controllerBreadcrumb = [
+    { name: "Dashboard", link: "/" },
+    { name: "Controllers", link: "" },
+  ];
   const NavbarDrawer = () => {
     return (
       <Masthead id="basic">
@@ -146,16 +156,26 @@ export const TableWithFavorite = () => {
       </Masthead>
     );
   };
+  const onCloseLoginHint = () => {
+    setLoginHintVisible(false);
+  };
   return (
     <>
       <Page header={<NavbarDrawer />} sidebar={Sidebar}>
-        <AlertMessage
-          message="Want to see your own data?"
-          link="Login to create an account"
-        />
+        {loginHintVisible && (
+          <LoginHint
+            message="Want to see your own data?"
+            link="Login or Create an account"
+            onCloseMethod={onCloseLoginHint}
+          />
+        )}
+
         <PageSection variant={PageSectionVariants.light}>
-          <PathBreadCrumb pathList={["Dashboard", "Components"]} />
-          <Heading headingTitle="Controllers"></Heading>
+          <PathBreadCrumb pathList={controllerBreadcrumb} />
+          <Heading
+            containerClass="publicDataPageTitle"
+            headingTitle="Controllers"
+          />
           <div className="filterContainer">
             <SearchBox
               dataArray={dataArray}
@@ -180,7 +200,7 @@ export const TableWithFavorite = () => {
               className="controllerListButton"
             />
             <ToggleGroupItem
-              text={`Favorites(${favoriteRepoNames.length})`}
+              text={`Favorites(${favoriteRepoNames?.length})`}
               buttonId="favoriteListButton"
               isSelected={isSelected === "favoriteListButton"}
               onChange={handleButtonClick}
@@ -197,15 +217,17 @@ export const TableWithFavorite = () => {
               </Tr>
             </Thead>
             <Tbody>
-              {selectedArray.length > 0 ? (
+              {selectedArray && selectedArray.length > 0 ? (
                 selectedArray.map((repo, rowIndex) => (
                   <Tr key={rowIndex}>
                     <Td dataLabel={columnNames.controller}>
-                      <a href="#">{repo.controller}</a>
+                      <div className="controller-name">{repo.controller}</div>
                     </Td>
                     <Td dataLabel={columnNames.name}>{repo.name}</Td>
                     <Td dataLabel={columnNames.creationDate}>
-                      {moment(repo.metadata["dataset.created"]).format("YYYY-MM-DDTHH:mm")}
+                      {moment(repo.metadata["dataset.created"]).format(
+                        "YYYY-MM-DDTHH:mm"
+                      )}
                     </Td>
                     <Td
                       favorites={{
@@ -225,7 +247,17 @@ export const TableWithFavorite = () => {
               )}
             </Tbody>
           </TableComposable>
-          <TablePagination numberOfControllers={isSelected==="controllerListButton"?publicData.length:favoriteRepoNames.length} page={page} setPage={setPage} perPage={perPage} setPerPage={setPerPage}/>
+          <TablePagination
+            numberOfControllers={
+              isSelected === "controllerListButton"
+                ? publicData.length
+                : favoriteRepoNames.length
+            }
+            page={page}
+            setPage={setPage}
+            perPage={perPage}
+            setPerPage={setPerPage}
+          />
         </PageSection>
       </Page>
     </>

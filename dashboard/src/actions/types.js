@@ -5,3 +5,6 @@ export const CLEAR_TOAST = "CLEAR_TOAST";
 /* LOADING */
 export const LOADING = "LOADING";
 export const COMPLETED = "COMPLETED";
+
+/* CONTROLLERS */
+export const GET_PUBLIC_CONTROLLERS = "GET_PUBLIC_CONTROLLERS";

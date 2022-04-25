@@ -7,7 +7,7 @@ import {
   yyyyMMddFormat,
   Button,
 } from "@patternfly/react-core";
-import "./index.css"
+import "./index.less";
 import { formatDate } from "../../../utils/dateFormatter";
 
 function DatePickerWidget({
@@ -16,12 +16,8 @@ function DatePickerWidget({
   controllerName,
   setDateRange,
 }) {
-  const [fromDate, setFromDate] = useState(
-    formatDate(new Date(1990,10,4))
-  );
-  const [toDate, setToDate] = useState(
-    formatDate(new Date())
-  );
+  const [fromDate, setFromDate] = useState(formatDate(new Date(1990, 10, 4)));
+  const [toDate, setToDate] = useState(formatDate(new Date()));
   const toValidator = (date) =>
     isValidDate(fromDate) && date >= fromDate
       ? ""
@@ -30,9 +26,9 @@ function DatePickerWidget({
   const onFromChange = (_str, date) => {
     setFromDate(new Date(date));
     if (isValidDate(date)) {
-      if(date>new Date(toDate)){
-      date.setDate(date.getDate() + 1);
-      setToDate(yyyyMMddFormat(date));
+      if (date > new Date(toDate)) {
+        date.setDate(date.getDate() + 1);
+        setToDate(yyyyMMddFormat(date));
       }
     } else {
       setToDate("");
@@ -43,8 +39,9 @@ function DatePickerWidget({
     let modifiedArray = [];
     modifiedArray = dataArray.filter((data) => {
       return (
-        new Date((data.metadata["dataset.created"]).split(":")[0])>= fromDate &&
-        new Date((data.metadata["dataset.created"]).split(":")[0])<= new Date(toDate) &&
+        new Date(data.metadata["dataset.created"].split(":")[0]) >= fromDate &&
+        new Date(data.metadata["dataset.created"].split(":")[0]) <=
+          new Date(toDate) &&
         data.name.includes(controllerName)
       );
     });

@@ -1,29 +1,15 @@
-import { Alert, AlertActionCloseButton } from "@patternfly/react-core";
-import "./index.css"
+import { Alert } from "@patternfly/react-core";
 import React from "react";
 
-function AlertMessage({ message, link }) {
+const AlertMessage = ( message ) => {
   return (
     <Alert
       className="alertNotification"
       variant="info"
       isInline
-      actionClose={
-        <AlertActionCloseButton
-          onClose={() =>
-            (document.querySelector(".alertNotification").style.display =
-              "none")
-          }
-        />
-      }
-      title={[
-        `${message}`,
-        <a className="alertHelpText">
-          Click here to create an account
-        </a>,
-      ]}
-    ></Alert>
+      title={ message }
+    />
   );
-}
+};
 
 export default AlertMessage;
