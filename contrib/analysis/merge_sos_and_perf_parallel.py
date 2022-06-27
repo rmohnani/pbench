@@ -12,6 +12,7 @@ from collections import OrderedDict
 from datetime import datetime
 from dateutil import rrule
 from dateutil.relativedelta import relativedelta
+from pbench_runs import PbenchRuns
 
 from elasticsearch1 import Elasticsearch
 from elasticsearch1.helpers import scan
@@ -43,6 +44,11 @@ def run_index_gen(month_gen):
     for month in month_gen:
         yield f"dsa-pbench.v4.run.{month}"
 
+def paired_run_result_index_gen(month_gen):
+    for month in month_gen:
+        run_index = f"dsa-pbench.v4.run.{month}"
+        result_index = f"dsa-pbench.v4.result-data.{month}-*"
+        yield run_index, result_index
 
 def es_data_gen(es, index, doc_type):
     """Yield documents where the `run.script` field is "fio" for the given index
@@ -76,85 +82,17 @@ def pbench_result_data_samples_gen(es, month_gen):
         for doc in es_data_gen(es, result_index, "pbench-result-data-sample"):
             yield doc
 
-
 def load_pbench_runs(es, now: datetime, record_limit):
-    """Load all the pbench run data, sub-setting to contain only the fields we
-    require.
-
-    We also ignore any pbench run without a `controller_dir` field or without
-    a `sosreports` field.
-
-    A few statistics about the processing is printed to stdout.
-
-    Returns a dictionary containing the processed pbench run documents
-    """
-    pbench_runs = dict()
-
-    recs = 0
-    missing_ctrl_dir = 0
-    missing_sos = 0
-    sos_not_two = 0
-    accepted = 0
-
+    pbench_runs = PbenchRuns()
+    
     for _source in pbench_runs_gen(es, _month_gen(now)):
-        recs += 1
-        run = _source["_source"]
-        run_id = run["@metadata"]["md5"]
-        if "controller_dir" not in run["@metadata"]:
-            missing_ctrl_dir += 1
-            print(f"pbench run with no controller_dir: {run_id}")
-            continue
-
-        if "sosreports" not in run:
-            missing_sos += 1
-            continue
-
-        if len(run["sosreports"]) != 2:
-            sos_not_two += 1
-            continue
-
-        first = run["sosreports"][0]
-        second = run["sosreports"][1]
-        if first["hostname-f"] != second["hostname-f"]:
-            print(f"pbench run with sosreports from different hosts: {run_id}")
-            continue
-
-        accepted += 1
-
-        run_index = _source["_index"]
-
-        sosreports = dict()
-        # FIXME: Should I remove the forloop here after the above change?
-        for sosreport in run["sosreports"]:
-            sosreports[os.path.split(sosreport["name"])[1]] = {
-                "hostname-s": sosreport["hostname-s"],
-                "hostname-f": sosreport["hostname-f"],
-                "time": sosreport["name"].split("/")[2],
-                "inet": [nic["ipaddr"] for nic in sosreport["inet"]],
-                # FIXME: Key Error on inet6
-                # "inet6": [nic["ipaddr"] for nic in sosreport["inet6"]],
-            }
-
-        pbench_runs[run_id] = dict(
-            run_id=run_id,
-            run_index=run_index,
-            controller_dir=run["@metadata"]["controller_dir"],
-            sosreports=sosreports,
-        )
-
-        if accepted >= record_limit:
+        pbench_runs.add_run(_source)
+        
+        if pbench_runs.trackers["valid_records"] >= record_limit:
             break
-
-    print(
-        f"Stats for pbench runs: accepted {accepted:n} records of"
-        f" {recs:n}, missing 'controller_dir' field {missing_ctrl_dir:n},"
-        f" missing 'sosreports' field {missing_sos:n}",
-        f" 'sosreports' not equal to two for single clients {sos_not_two:n}",
-        flush=True,
-    )
-
-    return pbench_runs
-
+    
+    pbench_runs.print_stats()
+    return pbench_runs.get_runs()
 
 # extract list of clients from the URL
 def extract_clients(results_meta, es):
