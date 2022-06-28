@@ -197,8 +197,8 @@ def transform_result(source, pbench_runs, results_seen, stats):
     """Transform the raw result data sample document to a stripped down version,
     augmented with pbench run data.
     """
-    print(source)
-    print("\n")
+    # print(source)
+    # print("\n")
     result_id = source["_id"]
     assert result_id not in results_seen, f"Result ID {result_id} repeated"
     results_seen[result_id] = True
@@ -253,6 +253,7 @@ def transform_result(source, pbench_runs, results_seen, stats):
     # The following field names are required
     try:
         benchmark = index["benchmark"]
+        # why do we care about insertion order here?
         result = OrderedDict()
         result.update(
             [
@@ -329,6 +330,8 @@ def process_results(es, now, session, incoming_url, pool, pbench_runs, stats):
     diskhost_map = dict()
 
     for _source in pbench_result_data_samples_gen(es, _month_gen(now)):
+        print("source" + _source)
+        print("\n")
         stats["total_recs"] += 1
         result = transform_result(_source, pbench_runs, results_seen, stats)
         if result is None:
@@ -364,8 +367,13 @@ def process_results(es, now, session, incoming_url, pool, pbench_runs, stats):
             continue
 
         result["clientnames"] = clientnames
+        print("result")
+        print(result)
 
-        yield result
+        print("result" + result)
+        break
+        # yield result
+        
 
 
 def main(args):
