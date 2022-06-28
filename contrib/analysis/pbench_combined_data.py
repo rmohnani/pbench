@@ -17,7 +17,9 @@ class PbenchCombinedData:
         invalid = False
         # create run_diagnostic data for all checks
         for check in self.diagnostic_checks["run"]:
-            diagnostic_update, issue = check.run_diagnostic(doc)
+            this_check = check()
+            this_check.diagnostic(doc)
+            diagnostic_update, issue = this_check.get_vals()
             run_diagnostic.update(diagnostic_update)
             invalid |= issue
 
@@ -118,10 +120,17 @@ class PbenchCombinedDataCollection:
  
 class DiagnosticCheck(ABC):
 
-    def __init__(self, doc):
+    def __init__(self):
         self.diagnostic_return = defaultdict(self.default_value)
         self.issues = False
-        self.diagnostic(doc)
+        self.initialize_diagnostic_return(self.diagnostic_names)
+        # self.diagnostic(doc)
+    
+    @property
+    @abstractmethod
+    def diagnostic_names(self):
+        "Define me!"
+        pass
  
     # needs to return dictionary of form: 
     # {'diagonstic_name' : diagnostic_val}
@@ -130,20 +139,26 @@ class DiagnosticCheck(ABC):
     def diagnostic(self, doc):
         ...
     
-    @property
-    def diagnostic_names(self):
-        return list(self.diagnostic_return.keys())
-    
-    def default_value():
+    def default_value(self):
         return False
+
+    def initialize_diagnostic_return(self, tracker_list):
+        for tracker in tracker_list:
+            self.diagnostic_return[tracker]
     
+    # @staticmethod
     def get_vals(self):
         return self.diagnostic_return, self.issues
 
 class ControllerDirRunCheck(DiagnosticCheck):
 
+    _diagnostic_names = ["missing_ctrl_dir"]
+
+    @property
+    def diagnostic_names(self):
+        return self._diagnostic_names
+
     def diagnostic(self, doc):
-        self.diagnostic_return = {"missing_ctrl_dir": False}
         if "controller_dir" not in doc["_source"]["@metadata"]:
             self.diagnostic_return["missing_ctrl_dir"] = True
             self.issues = True
@@ -154,12 +169,14 @@ class ControllerDirRunCheck(DiagnosticCheck):
 
 class SosreportRunCheck(DiagnosticCheck):
 
+    _diagnostic_names = ["missing_sosreports", 
+        "non_2_sosreports", "sosreports_diff_hosts"]
+
+    @property
+    def diagnostic_names(self):
+        return self._diagnostic_names
+
     def diagnostic(self, doc):
-        self.diagnostic_return["missing_sosreports"] = False
-        self.diagnostic_return["non_2_sosreports"] = False
-        self.diagnostic_return["sosreports_diff_hosts"] = False
-        # self.issues = True
-        
         # check if sosreports present
         if "sosreports" not in doc["_source"]:
             self.diagnostic_return["missing_sosreports"] = True
@@ -189,10 +206,14 @@ class SosreportRunCheck(DiagnosticCheck):
     #     return ["missing_sosreports", "non_2_sosreports", "sosreports_diff_hosts"]
 
 class SeenResultCheck(DiagnosticCheck):
+
+    _diagnostic_names = ["missing._id", "duplicate_result_id"]
+
+    @property
+    def diagnostic_names(self):
+        return self._diagnostic_names
     
     def diagnostic(self, doc, results_seen):
-        self.diagnostic_return["missing._id"] = False
-        self.diagnostic_return["duplicate_result_id"] = False
         # self.issues = True
 
         # first check if result doc has a result id field
@@ -221,23 +242,27 @@ class SeenResultCheck(DiagnosticCheck):
 
 class BaseResultCheck(DiagnosticCheck):
 
+    # format missing.property/subproperty/...
+    _diagnostic_names = [
+        "missing._source",
+        "missing._source/run",
+        "missing._source/run/id",
+        "missing._source/run/name",
+        "missing._source/iteration",
+        "missing._source/iteration/name",
+        "missing._source/sample",
+        "missing._source/sample/name",
+        "missing._source/sample/measurement_type",
+        "missing._source/sample/measurement_title",
+        "missing._source/sample/measurement_idx", 
+    ]
+
+    @property
+    def diagnostic_names(self):
+        return self._diagnostic_names
+
     def diagnostic(self, doc):
-        # format missing.property/subproperty/...
-        self.diagnostic_return.update(
-            [
-                ("missing._source", False),
-                ("missing._source/run", False),
-                ("missing._source/run/id", False),
-                ("missing._source/run/name", False),
-                ("missing._source/iteration", False),
-                ("missing._source/iteration/name", False)
-                ("missing._source/sample", False)
-                ("missing._source/sample/name", False)
-                ("missing._source/sample/measurement_type", False)
-                ("missing._source/sample/measurement_title", False)
-                ("missing._source/sample/measurement_idx", False)
-            ]
-        )
+        
         # unforunately very ugly if statement to check what
         # fields are missing to create comprehensive diagnostic info
         if "_source" not in doc:
@@ -264,7 +289,7 @@ class BaseResultCheck(DiagnosticCheck):
             self.diagnostic_return["missing._source/sample/measurement_idx"] = True
         else:
             return self.diagnostic_return, self.issues
-            
+
         self.issues = True
         return self.diagnostic_return, self.issues
     
