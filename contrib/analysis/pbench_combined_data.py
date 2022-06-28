@@ -1,55 +1,29 @@
 from abc import ABC, abstractmethod
 import os
+import time
 
-class PbenchRuns:
-    def __init__(self):
-        self.runs = dict()
-        self.trackers = dict()
-        self.diagnostic_checks = [ControllerDirCheck, SosreportCheck]
-        self.trackers_initialization()
-
+class PbenchCombinedData:
+    def __init__(self, diagnostic_checks):
+        self.data = dict()
+        self.diagnostics = {"run" : dict(), "result": dict()}
+        self.diagnostic_checks = diagnostic_checks
     
-    def trackers_initialization(self):
-        self.trackers["valid_records"] = 0
-        self.trackers["total_records"] = 0
-
-        for check in self.diagnostic_checks:
-            check_instance = check()
-            for name in check_instance.diagnostic_names:
-                self.trackers[name] = 0
-        
-    def print_stats(self):
-        stats = "Pbench runs Stats: \n"
-        for tracker in self.trackers:
-            stats += f"{tracker}: {self.trackers[tracker] : n} \n"
-
-        print(stats, flush=True)
-    
-    def add_run(self, doc):
-        # increment total records stat
-        self.trackers['total_records'] += 1
-        run_diagnostic = dict()
+    def add_run_data(self, doc):
+        run_diagnostic = self.diagnostics["run"]
 
         run = doc["_source"]
         run_id = run["@metadata"]["md5"]
 
-        issues = False
+        invalid = False
         # create run_diagnostic data for all checks
-        for check in self.diagnostic_checks:
+        for check in self.diagnostic_checks["run"]:
             diagnostic_update, issue = check.run_diagnostic(doc)
             run_diagnostic.update(diagnostic_update)
-            issues |= issue
-        
-        # update trackers based on run_diagnostic data collected
-        for diagnostic in run_diagnostic:
-            if run_diagnostic[diagnostic] == True:
-                self.trackers[diagnostic] += 1
+            invalid |= issue
 
-        run_diagnostic["invalid"] = issues
-        # update valid_records 
-        if run_diagnostic["invalid"] == False:
-            self.trackers["valid_records"] += 1
-
+        run_diagnostic["valid"] = not invalid
+        # update record valid status
+        if run_diagnostic["valid"] == True:
             run_index = doc["_index"]
 
             # TODO: Figure out what exactly this sosreport section is doing,
@@ -66,16 +40,60 @@ class PbenchRuns:
                     # "inet6": [nic["ipaddr"] for nic in sosreport["inet6"]],
                 }
 
-            self.runs[run_id] = dict(
-                run_id=run_id,
-                run_index=run_index,
-                controller_dir=run["@metadata"]["controller_dir"],
-                sosreports=sosreports,
-                run_diagnostic = run_diagnostic
-            )
+            self.data.update({
+                "run_id": run_id,
+                "run_index": run_index,
+                "controller_dir": run["@metadata"]["controller_dir"],
+                "sosreports": sosreports,
+                "diagnostics": self.diagnostics
+            })
+    
+
+class PbenchCombinedDataCollection:
+    def __init__(self):
+        self.run_id_to_data = dict()
+        self.trackers = {"run": dict(), "result": dict()}
+        self.diagnostic_checks = {"run": [ControllerDirCheck, SosreportCheck],
+                                    "result": []}
+        self.trackers_initialization()
+
+    
+    def trackers_initialization(self):
+        for type in self.diagnostic_checks:
+            self.trackers[type]["valid"] = 0
+            self.trackers[type]["total_records"] = 0
+            for check in self.diagnostic_checks[type]:
+                check_instance = check()
+                for name in check_instance.diagnostic_names:
+                    self.trackers[type].update({name: 0})
+
+    def update_run_diagnostic_trackers(self, record : PbenchCombinedData):
+        run_diagnostic = record.data["diagnostics"]["run"]
+        # update trackers based on run_diagnostic data collected
+        self.trackers["run"]['total_records'] += 1
+        for diagnostic in run_diagnostic:
+            if run_diagnostic[diagnostic] == True:
+                self.trackers["run"][diagnostic] += 1
+        
+    def print_stats(self):
+        stats = "Pbench runs Stats: \n"
+        for tracker in self.trackers:
+            stats += f"{tracker}: {self.trackers[tracker] : n} \n"
+
+        print(stats, flush=True)
+    
+    def add_run(self, doc):
+        new_run = PbenchCombinedData(self.diagnostic_checks)
+        new_run.add_run_data(doc)
+        time.sleep(1)
+        print(new_run.data)
+        self.update_run_diagnostic_trackers(new_run)
+        run_id = new_run.data["run_id"]
+        self.run_id_to_data[run_id] = new_run
+
     
     def get_runs(self):
-        return self.runs
+        return self.run_id_to_data
 
  
 class DiagnosticCheck(ABC):

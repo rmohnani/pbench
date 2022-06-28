@@ -12,7 +12,7 @@ from collections import OrderedDict
 from datetime import datetime
 from dateutil import rrule
 from dateutil.relativedelta import relativedelta
-from pbench_runs import PbenchRuns
+from pbench_combined_data import PbenchCombinedData, PbenchCombinedDataCollection
 
 from elasticsearch1 import Elasticsearch
 from elasticsearch1.helpers import scan
@@ -53,14 +53,12 @@ def paired_run_result_index_gen(month_gen):
 def merge_run_result_index(es, month, record_limit):
     run_index = f"dsa-pbench.v4.run.{month}"
     result_index = f"dsa-pbench.v4.result-data.{month}-*"
-    pbench_runs = PbenchRuns()
+    pbench_runs = PbenchCombinedData()
 
     for doc in es_data_gen(es, run_index, "pbench-run"):
         pbench_runs.add_run(doc)
 
     # for doc in es_data_gen(es, result_index, "pbench-result-data-sample"):
-
-
 
 
 def es_data_gen(es, index, doc_type):
@@ -101,16 +99,16 @@ def load_pbench_runs(es, now: datetime, record_limit):
     a `sosreports` field. A few statistics about the processing is printed to stdout.
     Returns a dictionary containing the processed pbench run documents
     """
-    pbench_runs = PbenchRuns()
+    pbench_data = PbenchCombinedDataCollection()
     
     for _source in pbench_runs_gen(es, _month_gen(now)):
-        pbench_runs.add_run(_source)
+        pbench_data.add_run(_source)
         
-        if pbench_runs.trackers["valid_records"] >= record_limit:
+        if pbench_data.trackers["run"]["valid"] >= record_limit:
             break
     
-    pbench_runs.print_stats()
-    return pbench_runs.get_runs()
+    pbench_data.print_stats()
+    return pbench_data.get_runs()
 
 # extract list of clients from the URL
 def extract_clients(results_meta, es):
