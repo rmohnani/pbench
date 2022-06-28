@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from collections import defaultdict
 import os
 
 class PbenchCombinedData:
@@ -51,11 +52,16 @@ class PbenchCombinedData:
             "diagnostics": self.diagnostics
         })
     
-    def add_result_data(self, doc):
-        self.transform_result(doc)
+    def add_result_data(self, doc, results_seen):
+        self.transform_result(doc, results_seen)
     
-    def transform_result(self, doc):
-        pass
+    def transform_result(self, doc, results_seen):
+        first_result_check = SeenResultCheck()
+        diagnostic_update, issues = first_result_check.diagnostic(doc, results_seen)
+
+
+
+        
         
 
 class PbenchCombinedDataCollection:
@@ -63,9 +69,12 @@ class PbenchCombinedDataCollection:
         self.run_id_to_data_valid = dict()
         self.invalid = dict()
         self.trackers = {"run": dict(), "result": dict()}
-        self.diagnostic_checks = {"run": [ControllerDirCheck, SosreportCheck],
+        self.diagnostic_checks = {"run": [ControllerDirRunCheck, SosreportRunCheck],
                                     "result": []}
         self.trackers_initialization()
+        # not sure if this is really required but will follow current
+        # implementation for now
+        self.results_seen = dict()
 
     
     def trackers_initialization(self):
@@ -108,64 +117,157 @@ class PbenchCombinedDataCollection:
 
  
 class DiagnosticCheck(ABC):
+
+    def __init__(self, doc):
+        self.diagnostic_return = defaultdict(self.default_value)
+        self.issues = False
+        self.diagnostic(doc)
  
     # needs to return dictionary of form: 
     # {'diagonstic_name' : diagnostic_val}
     @staticmethod
     @abstractmethod
-    def run_diagnostic(doc):
+    def diagnostic(self, doc):
         ...
     
     @property
-    @abstractmethod
     def diagnostic_names(self):
-        ...
+        return list(self.diagnostic_return.keys())
+    
+    def default_value():
+        return False
+    
+    def get_vals(self):
+        return self.diagnostic_return, self.issues
 
-class ControllerDirCheck(DiagnosticCheck):
+class ControllerDirRunCheck(DiagnosticCheck):
 
-    def run_diagnostic(doc):
-        issues = False
-        diagnostic_return = {"missing_ctrl_dir": False}
+    def diagnostic(self, doc):
+        self.diagnostic_return = {"missing_ctrl_dir": False}
         if "controller_dir" not in doc["_source"]["@metadata"]:
-            diagnostic_return["missing_ctrl_dir"] = True
-            issues = True
-        return diagnostic_return, issues
+            self.diagnostic_return["missing_ctrl_dir"] = True
+            self.issues = True
     
-    @property
-    def diagnostic_names(self):
-        return ["missing_ctrl_dir"]
+    # @property
+    # def diagnostic_names(self):
+    #     return ["missing_ctrl_dir"]
 
-    
+class SosreportRunCheck(DiagnosticCheck):
 
-class SosreportCheck(DiagnosticCheck):
-
-    def run_diagnostic(doc):
-        diagnostic_return = dict()
-        diagnostic_return["missing_sosreports"] = False
-        diagnostic_return["non_2_sosreports"] = False
-        diagnostic_return["sosreports_diff_hosts"] = False
-        issues = True
+    def diagnostic(self, doc):
+        self.diagnostic_return["missing_sosreports"] = False
+        self.diagnostic_return["non_2_sosreports"] = False
+        self.diagnostic_return["sosreports_diff_hosts"] = False
+        # self.issues = True
         
         # check if sosreports present
         if "sosreports" not in doc["_source"]:
-            diagnostic_return["missing_sosreports"] = True
-            return diagnostic_return, issues
+            self.diagnostic_return["missing_sosreports"] = True
+            self.issues = True
+            # return self.diagnostic_return, self.issues
         
         # check if run has exactly 2 sosreports
-        if len(doc["_source"]["sosreports"]) != 2:
-            diagnostic_return["non_2_sosreports"] = True
-            return diagnostic_return, issues
+        elif len(doc["_source"]["sosreports"]) != 2:
+            self.diagnostic_return["non_2_sosreports"] = True
+            self.issues = True
+            # return self.diagnostic_return, self.issues
         
-        # check if 2 sosreports have different hosts
-        first = doc["_source"]["sosreports"][0]
-        second = doc["_source"]["sosreports"][1]
-        if first["hostname-f"] != second["hostname-f"]:
-            diagnostic_return["sosreports_diff_hosts"] = True
-            return diagnostic_return, issues
+        else:
+            # check if 2 sosreports have different hosts
+            first = doc["_source"]["sosreports"][0]
+            second = doc["_source"]["sosreports"][1]
+            if first["hostname-f"] != second["hostname-f"]:
+                self.diagnostic_return["sosreports_diff_hosts"] = True
+                self.issues = True
+                # return self.diagnostic_return, self.issues
         
-        issues = False
-        return diagnostic_return, issues
+        # self.issues = False
+        return self.diagnostic_return, self.issues
     
-    @property
-    def diagnostic_names(self):
-        return ["missing_sosreports", "non_2_sosreports", "sosreports_diff_hosts"]
+    # @property
+    # def diagnostic_names(self):
+    #     return ["missing_sosreports", "non_2_sosreports", "sosreports_diff_hosts"]
+
+class SeenResultCheck(DiagnosticCheck):
+    
+    def diagnostic(self, doc, results_seen):
+        self.diagnostic_return["missing._id"] = False
+        self.diagnostic_return["duplicate_result_id"] = False
+        # self.issues = True
+
+        # first check if result doc has a result id field
+        if "_id" not in doc:
+            self.diagnostic_return["missing._id"] = True
+            self.issues = True
+            # return self.diagnostic_return, self.issues
+        else:
+            result_id = doc["_id"]
+            
+            # second check if result has been seen already
+            # NOTE: not sure if this check is really necessary (whether
+            # a case where duplicate results occur exists)
+            if result_id in results_seen:
+                self.diagnostic_return["duplicate_result_id"] = True
+                self.issues = True
+                # return self.diagnostic_return, self.issues
+            else:
+                results_seen[result_id] = True
+
+        return self.diagnostic_return, self.issues
+    
+    # @property
+    # def diagnostic_names(self):
+    #     return ["missing._id", "duplicate_result_id"]
+
+class BaseResultCheck(DiagnosticCheck):
+
+    def diagnostic(self, doc):
+        # format missing.property/subproperty/...
+        self.diagnostic_return.update(
+            [
+                ("missing._source", False),
+                ("missing._source/run", False),
+                ("missing._source/run/id", False),
+                ("missing._source/run/name", False),
+                ("missing._source/iteration", False),
+                ("missing._source/iteration/name", False)
+                ("missing._source/sample", False)
+                ("missing._source/sample/name", False)
+                ("missing._source/sample/measurement_type", False)
+                ("missing._source/sample/measurement_title", False)
+                ("missing._source/sample/measurement_idx", False)
+            ]
+        )
+        # unforunately very ugly if statement to check what
+        # fields are missing to create comprehensive diagnostic info
+        if "_source" not in doc:
+            self.diagnostic_return["missing._source"] = True 
+        elif "run" not in doc["_source"]:
+            self.diagnostic_return["missing._source/run"] = True
+        elif "id" not in doc["_source"]["run"]:
+            self.diagnostic_return["missing._source/run/id"] = True
+        elif "name" not in doc["_source"]["run"]:
+            self.diagnostic_return["missing._source/run/name"] = True
+        elif "iteration" not in doc["_source"]:
+            self.diagnostic_return["missing._source/iteration"] = True
+        elif "name" not in doc["_source"]["iteration"]:
+            self.diagnostic_return["missing._source/iteration/name"] = True
+        elif "sample" not in doc["_source"]:
+            self.diagnostic_return["missing._source/sample"] = True
+        elif "name" not in doc["_source"]["sample"]:
+            self.diagnostic_return["missing._source/sample/name"] = True
+        elif "measurement_type" not in doc["_source"]["sample"]:
+            self.diagnostic_return["missing._source/sample/measurement_type"] = True
+        elif "measurement_title" not in doc["_source"]["sample"]:
+            self.diagnostic_return["missing._source/sample/measurement_title"] = True
+        elif "measurement_idx" not in doc["_source"]["sample"]:
+            self.diagnostic_return["missing._source/sample/measurement_idx"] = True
+        else:
+            return self.diagnostic_return, self.issues
+            
+        self.issues = True
+        return self.diagnostic_return, self.issues
+    
+    # @property
+    # def diagnostic_names(self):
+    #     return 
