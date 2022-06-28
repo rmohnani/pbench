@@ -1,6 +1,5 @@
 from abc import ABC, abstractmethod
 import os
-import time
 
 class PbenchCombinedData:
     def __init__(self, diagnostic_checks):
@@ -22,13 +21,17 @@ class PbenchCombinedData:
             invalid |= issue
 
         run_diagnostic["valid"] = not invalid
-        # update record valid status
-        if run_diagnostic["valid"] == True:
-            run_index = doc["_index"]
 
-            # TODO: Figure out what exactly this sosreport section is doing,
-            #       cuz I still don't know
-            sosreports = dict()
+        run_index = doc["_index"]
+
+        # TODO: Figure out what exactly this sosreport section is doing,
+        #       cuz I still don't know
+        sosreports = dict()
+
+        # NOTE: Only if run data valid (2 sosreports with non-different hosts)
+        #       are the sosreports undergoing processing, else empty dict
+
+        if run_diagnostic["valid"] == True:
             # FIXME: Should I remove the forloop here after the above change?
             for sosreport in run["sosreports"]:
                 sosreports[os.path.split(sosreport["name"])[1]] = {
@@ -40,18 +43,25 @@ class PbenchCombinedData:
                     # "inet6": [nic["ipaddr"] for nic in sosreport["inet6"]],
                 }
 
-            self.data.update({
-                "run_id": run_id,
-                "run_index": run_index,
-                "controller_dir": run["@metadata"]["controller_dir"],
-                "sosreports": sosreports,
-                "diagnostics": self.diagnostics
-            })
+        self.data.update({
+            "run_id": run_id,
+            "run_index": run_index,
+            "controller_dir": run["@metadata"]["controller_dir"],
+            "sosreports": sosreports,
+            "diagnostics": self.diagnostics
+        })
     
+    def add_result_data(self, doc):
+        self.transform_result(doc)
+    
+    def transform_result(self, doc):
+        pass
+        
 
 class PbenchCombinedDataCollection:
     def __init__(self):
-        self.run_id_to_data = dict()
+        self.run_id_to_data_valid = dict()
+        self.invalid = dict()
         self.trackers = {"run": dict(), "result": dict()}
         self.diagnostic_checks = {"run": [ControllerDirCheck, SosreportCheck],
                                     "result": []}
@@ -77,23 +87,24 @@ class PbenchCombinedDataCollection:
         
     def print_stats(self):
         stats = "Pbench runs Stats: \n"
-        for tracker in self.trackers:
-            stats += f"{tracker}: {self.trackers[tracker] : n} \n"
+        for tracker in self.trackers["run"]:
+            stats += f"{tracker}: {self.trackers['run'][tracker] : n} \n"
 
         print(stats, flush=True)
     
     def add_run(self, doc):
         new_run = PbenchCombinedData(self.diagnostic_checks)
         new_run.add_run_data(doc)
-        time.sleep(1)
-        print(new_run.data)
         self.update_run_diagnostic_trackers(new_run)
         run_id = new_run.data["run_id"]
-        self.run_id_to_data[run_id] = new_run
+        if new_run.data["diagnostics"]["run"]["valid"] == True:
+            self.run_id_to_data_valid[run_id] = new_run
+        else:
+            self.invalid[run_id] = new_run
 
     
     def get_runs(self):
-        return self.run_id_to_data
+        return self.run_id_to_data_valid
 
  
 class DiagnosticCheck(ABC):

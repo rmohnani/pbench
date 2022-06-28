@@ -197,6 +197,8 @@ def transform_result(source, pbench_runs, results_seen, stats):
     """Transform the raw result data sample document to a stripped down version,
     augmented with pbench run data.
     """
+    print(source)
+    print("\n")
     result_id = source["_id"]
     assert result_id not in results_seen, f"Result ID {result_id} repeated"
     results_seen[result_id] = True
