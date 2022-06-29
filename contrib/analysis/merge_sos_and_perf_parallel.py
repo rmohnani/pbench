@@ -73,7 +73,7 @@ def es_data_gen(es, index, doc_type):
         index=index,
         doc_type=doc_type,
         scroll="1d",
-        request_timeout = 3600, # to prevent timeout errors (3600 is arbitrary)
+        request_timeout=3600,  # to prevent timeout errors (3600 is arbitrary)
     ):
         yield doc
 
@@ -135,7 +135,7 @@ def extract_clients(results_meta, es):
         index=run_index,
         doc_type="pbench-run-toc-entry",
         scroll="1m",
-        request_timeout = 3600, # to prevent timeout errors (3600 is arbitrary)
+        request_timeout=3600,  # to prevent timeout errors (3600 is arbitrary)
     ):
         src = doc["_source"]
         if src["parent"] == parent_dir_name:
@@ -293,7 +293,9 @@ def transform_result(source, pbench_runs, results_seen, stats):
 
     # optional workload parameters accounting for defaults if not found
 
-    result["benchmark.filename"] = sentence_setify(benchmark.get("filename", "/tmp/fio"))
+    result["benchmark.filename"] = sentence_setify(
+        benchmark.get("filename", "/tmp/fio")
+    )
     result["benchmark.iodepth"] = benchmark.get("iodepth", "32")
     result["benchmark.size"] = sentence_setify(benchmark.get("size", "4096M"))
     result["benchmark.numjobs"] = sentence_setify(benchmark.get("numjobs", "1"))
@@ -304,7 +306,8 @@ def transform_result(source, pbench_runs, results_seen, stats):
 
     return result
 
-def sentence_setify(sentence : str) -> str:
+
+def sentence_setify(sentence: str) -> str:
     """Splits input by ", " gets rid of duplicates and rejoins unique
     items into original format. Effectively removes duplicates in input.
     """
@@ -330,8 +333,8 @@ def process_results(es, now, session, incoming_url, pool, pbench_runs, stats):
     diskhost_map = dict()
 
     for _source in pbench_result_data_samples_gen(es, _month_gen(now)):
-        print("source" + _source)
-        print("\n")
+        # print("source" + _source)
+        # print("\n")
         stats["total_recs"] += 1
         result = transform_result(_source, pbench_runs, results_seen, stats)
         if result is None:
@@ -367,12 +370,8 @@ def process_results(es, now, session, incoming_url, pool, pbench_runs, stats):
             continue
 
         result["clientnames"] = clientnames
-        print("result")
-        print(result)
 
-        print("result" + result)
-        break
-        # yield result
+        yield result
         
 
 
@@ -395,7 +394,9 @@ def main(args):
     ncpus = multiprocessing.cpu_count() - 1 if args.cpu_n == 0 else args.cpu_n
     pool = multiprocessing.Pool(ncpus) if ncpus != 1 else None
 
-    es = Elasticsearch([f"{args.es_host}:{args.es_port}"], timeout = 60) # to prevent read timeout errors (60 is arbitrary)
+    es = Elasticsearch(
+        [f"{args.es_host}:{args.es_port}"], timeout=60
+    )  # to prevent read timeout errors (60 is arbitrary)
 
     session = requests.Session()
     ua = session.headers["User-Agent"]

@@ -9,6 +9,8 @@ class PbenchCombinedData:
         self.diagnostic_checks = diagnostic_checks
     
     def add_run_data(self, doc):
+        print("doc: \n")
+        print(doc)
         run_diagnostic = self.diagnostics["run"]
 
         run = doc["_source"]
@@ -53,7 +55,7 @@ class PbenchCombinedData:
             "sosreports": sosreports,
             "diagnostics": self.diagnostics
         })
-
+        print("post-processing: \n")
         print(self.data)
     
     def add_result_data(self, doc, results_seen, all_data):
@@ -95,6 +97,8 @@ class PbenchCombinedData:
         invalid |= issues4
 
         result_diagnostic["valid"] = not invalid
+
+
 
 
 
