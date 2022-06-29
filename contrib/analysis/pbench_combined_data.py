@@ -9,8 +9,8 @@ class PbenchCombinedData:
         self.diagnostic_checks = diagnostic_checks
     
     def add_run_data(self, doc):
-        print("doc: \n")
-        print(doc)
+        # print("doc: \n")
+        # print(doc)
         run_diagnostic = self.diagnostics["run"]
 
         run = doc["_source"]
@@ -19,9 +19,8 @@ class PbenchCombinedData:
         invalid = False
         # create run_diagnostic data for all checks
         for check in self.diagnostic_checks["run"]:
-            this_check = check()
-            this_check.diagnostic(doc)
-            diagnostic_update, issue = this_check.get_vals()
+            check.diagnostic(doc)
+            diagnostic_update, issue = check.get_vals()
             run_diagnostic.update(diagnostic_update)
             invalid |= issue
 
@@ -55,75 +54,118 @@ class PbenchCombinedData:
             "sosreports": sosreports,
             "diagnostics": self.diagnostics
         })
-        print("post-processing: \n")
+        # print("post-processing: \n")
+        # print(self.data)
+
+    # def filter_run_data(self, new_name_to_path_dict):
+    #     for property in new_name_to_path_dict:
+    #         path_list = new_name_to_path_dict[property].split("/")
+    #         value = 0
+    #         self.data.update(property, value)
+    
+    def add_result_data(self, doc, result_diagnostic):
+        self.transform_result(doc, result_diagnostic)
+    
+    def transform_result(self, doc, result_diagnostic):
+
+        # # Diagnostic checks and data collection
+        # result_diagnostic = self.diagnostics["result"]
+        # invalid = False
+
+        # # create run_diagnostic data for all checks
+        # for check in self.diagnostic_checks["result"]:
+        #     check.diagnostic(doc)
+        #     diagnostic_update, issue = check.get_vals()
+        #     result_diagnostic.update(diagnostic_update)
+        #     invalid |= issue
+
+        # # NOTE: These checks can't be put into loop in current form
+        # # because ordering and different requirements of params
+        # # first check result not already seen before
+        # first_result_check = SeenResultCheck()
+        # first_result_check.diagnostic(doc, results_seen)
+        # diagnostic_update1, issues1 = first_result_check.get_vals()
+        # result_diagnostic.update(diagnostic_update1)
+        # invalid |= issues1
+
+        # # second check for all required fields/properties existence
+        # second_result_check = BaseResultCheck()
+        # second_result_check.diagnostic(doc)
+        # diagnostic_update2, issues2 = second_result_check.get_vals()
+        # result_diagnostic.update(diagnostic_update2)
+        # invalid |= issues2
+
+        # # third check if runs are missing
+        # third_result_check = RunNotInDataResultCheck(all_data)
+        # third_result_check.diagnostic(doc)
+        # diagnostic_update3, issues3 = third_result_check.get_vals()
+        # result_diagnostic.update(diagnostic_update3)
+        # invalid |= issues3
+
+        # # fourth check if runs are missing
+        # fourth_result_check = ClientHostAggregateResultCheck()
+        # fourth_result_check.diagnostic(doc)
+        # diagnostic_update4, issues4 = fourth_result_check.get_vals()
+        # result_diagnostic.update(diagnostic_update4)
+        # invalid |= issues4
+        self.data["diagnostic"]["result"] = result_diagnostic
+        if result_diagnostic["valid"] == True:
+            self.data.update(
+                [
+                    ("iteration.name", doc["_source"]["iteration"]["name"]),
+                    ("sample.name", doc["_source"]["sample"]["name"]),
+                    ("run.name", doc["_source"]["run"]["name"]),
+                    ("benchmark.bs", doc["_source"]["benchmark"]["bs"]),
+                    ("benchmark.direct", doc["_source"]["benchmark"]["direct"]),
+                    ("benchmark.ioengine",doc["_source"]["benchmark"]["ioengine"]),
+                    ("benchmark.max_stddevpct", doc["_source"]["benchmark"]["max_stddevpct"]),
+                    ("benchmark.primary_metric", doc["_source"]["benchmark"]["primary_metric"]),
+                    ("benchmark.rw", self.sentence_setify(doc["_source"]["benchmark"]["rw"])),
+                    ("sample.client_hostname", doc["_source"]["sample"]["client_hostname"]),
+                    ("sample.measurement_type", doc["_source"]["sample"]["measurement_type"]),
+                    ("sample.measurement_title", doc["_source"]["sample"]["measurement_title"]),
+                    ("sample.measurement_idx", doc["_source"]["sample"]["measurement_idx"]),
+                    ("sample.mean", doc["_source"]["sample"]["mean"]),
+                    ("sample.stddev", doc["_source"]["sample"]["stddev"]),
+                    ("sample.stddevpct", doc["_source"]["sample"]["stddevpct"])
+                ]
+            )
+        
+            # optional workload parameters accounting for defaults if not found
+            benchmark = doc["_source"]["benchmark"]
+            self.data["benchmark.filename"] = self.sentence_setify(
+                benchmark.get("filename", "/tmp/fio")
+            )
+            self.data["benchmark.iodepth"] = benchmark.get("iodepth", "32")
+            self.data["benchmark.size"] = self.sentence_setify(benchmark.get("size", "4096M"))
+            self.data["benchmark.numjobs"] = self.sentence_setify(benchmark.get("numjobs", "1"))
+            self.data["benchmark.ramp_time"] = benchmark.get("ramp_time", "none")
+            self.data["benchmark.runtime"] = benchmark.get("runtime", "none")
+            self.data["benchmark.sync"] = benchmark.get("sync", "none")
+            self.data["benchmark.time_based"] = benchmark.get("time_based", "none")
+        
         print(self.data)
-    
-    def add_result_data(self, doc, results_seen, all_data):
-        self.transform_result(doc, results_seen, all_data)
-    
-    def transform_result(self, doc, results_seen, all_data):
 
-        # Diagnostic checks and data collection
-        result_diagnostic = self.diagnostics["result"]
-        invalid = False
-        # NOTE: These checks can't be put into loop in current form
-        # because ordering and different requirements of params
-        # first check result not already seen before
-        first_result_check = SeenResultCheck()
-        first_result_check.diagnostic(doc, results_seen)
-        diagnostic_update1, issues1 = first_result_check.get_vals()
-        result_diagnostic.update(diagnostic_update1)
-        invalid |= issues1
-
-        # second check for all required fields/properties existence
-        second_result_check = BaseResultCheck()
-        second_result_check.diagnostic(doc)
-        diagnostic_update2, issues2 = second_result_check.get_vals()
-        result_diagnostic.update(diagnostic_update2)
-        invalid |= issues2
-
-        # third check if runs are missing
-        third_result_check = RunNotInDataResultCheck(all_data)
-        third_result_check.diagnostic(doc)
-        diagnostic_update3, issues3 = third_result_check.get_vals()
-        result_diagnostic.update(diagnostic_update3)
-        invalid |= issues3
-
-        # fourth check if runs are missing
-        fourth_result_check = ClientHostAggregateResultCheck()
-        fourth_result_check.diagnostic(doc)
-        diagnostic_update4, issues4 = fourth_result_check.get_vals()
-        result_diagnostic.update(diagnostic_update4)
-        invalid |= issues4
-
-        result_diagnostic["valid"] = not invalid
-
-
-
-
-
-
-
-
-
-
-
-
-
-        
-        
+    def sentence_setify(sentence: str) -> str:
+        """Splits input by ", " gets rid of duplicates and rejoins unique
+        items into original format. Effectively removes duplicates in input.
+        """
+        return ", ".join(set([word.strip() for word in sentence.split(",")]))
 
 class PbenchCombinedDataCollection:
     def __init__(self):
         self.run_id_to_data_valid = dict()
-        self.invalid = dict()
+        self.invalid = {"run": dict(), "result": dict()}
+        self.results_seen = dict()
         self.trackers = {"run": dict(), "result": dict()}
-        self.diagnostic_checks = {"run": [ControllerDirRunCheck, SosreportRunCheck],
-                                    "result": []}
+        self.diagnostic_checks = {"run": [ControllerDirRunCheck(), SosreportRunCheck()],
+                                    "result": [SeenResultCheck(self.results_seen), BaseResultCheck(),
+                                                RunNotInDataResultCheck(self.run_id_to_data_valid),
+                                                ClientHostAggregateResultCheck()]}
         self.trackers_initialization()
+        self.result_temp_id = 1
         # not sure if this is really required but will follow current
         # implementation for now
-        self.results_seen = dict()
 
     
     def trackers_initialization(self):
@@ -131,17 +173,18 @@ class PbenchCombinedDataCollection:
             self.trackers[type]["valid"] = 0
             self.trackers[type]["total_records"] = 0
             for check in self.diagnostic_checks[type]:
-                check_instance = check()
-                for name in check_instance.diagnostic_names:
+                for name in check.diagnostic_names:
                     self.trackers[type].update({name: 0})
 
-    def update_run_diagnostic_trackers(self, record : PbenchCombinedData):
-        run_diagnostic = record.data["diagnostics"]["run"]
+    def update_diagnostic_trackers(self, record : PbenchCombinedData, type : str):
+        # allowed types: "run", "result"
+        type_diagnostic = record.data["diagnostics"][type]
         # update trackers based on run_diagnostic data collected
-        self.trackers["run"]['total_records'] += 1
-        for diagnostic in run_diagnostic:
-            if run_diagnostic[diagnostic] == True:
+        self.trackers[type]["total_records"] += 1
+        for diagnostic in type_diagnostic:
+            if type_diagnostic[diagnostic] == True:
                 self.trackers["run"][diagnostic] += 1
+                
         
     def print_stats(self):
         stats = "Pbench runs Stats: \n"
@@ -153,13 +196,40 @@ class PbenchCombinedDataCollection:
     def add_run(self, doc):
         new_run = PbenchCombinedData(self.diagnostic_checks)
         new_run.add_run_data(doc)
-        self.update_run_diagnostic_trackers(new_run)
+        self.update_diagnostic_trackers(new_run, "run")
         run_id = new_run.data["run_id"]
         if new_run.data["diagnostics"]["run"]["valid"] == True:
             self.run_id_to_data_valid[run_id] = new_run
         else:
-            self.invalid[run_id] = new_run
+            self.invalid["run"][run_id] = new_run
 
+    def result_screening_check(self, doc):
+        result_diagnostic = dict()
+        invalid = False
+
+        # create run_diagnostic data for all checks
+        for check in self.diagnostic_checks["result"]:
+            check.diagnostic(doc)
+            diagnostic_update, issue = check.get_vals()
+            result_diagnostic.update(diagnostic_update)
+            invalid |= issue
+        
+        result_diagnostic["valid"] = not invalid
+        return result_diagnostic
+    
+    def add_result(self, doc):
+        result_diagnostic_return = self.result_screening_check(doc)
+        if result_diagnostic_return["valid"] == True:
+            associated_run_id = doc["_source"]["run"]["id"]
+            associated_run = self.run_id_to_data_valid[associated_run_id]
+            associated_run.add_result_data(doc, result_diagnostic_return)
+            self.update_diagnostic_trackers(associated_run, "result")
+        else:
+            doc.update({"diagnostic", result_diagnostic_return})
+            if result_diagnostic_return["missing._id"] == False:
+                self.invalid["result"][result_diagnostic_return["missing._id"]] = doc
+            else:
+                self.invalid["result"]["missing_so_temo_id_" + str(self.result_temp_id)] = doc
     
     def get_runs(self):
         return self.run_id_to_data_valid
@@ -168,9 +238,7 @@ class PbenchCombinedDataCollection:
 class DiagnosticCheck(ABC):
 
     def __init__(self):
-        self.diagnostic_return = defaultdict(self.default_value)
-        self.issues = False
-        self.initialize_diagnostic_return(self.diagnostic_names)
+        self.initialize_properties()
     
     @property
     @abstractmethod
@@ -179,20 +247,27 @@ class DiagnosticCheck(ABC):
         pass
  
     # appropriately updates instance variables 
-    @staticmethod
     @abstractmethod
     def diagnostic(self, doc):
-        ...
+        self.reset()
+    
+    def initialize_properties(self):
+        self.diagnostic_return = defaultdict(self.default_value)
+        self.issues = False
+        for tracker in self.diagnostic_names:
+            self.diagnostic_return[tracker]
     
     def default_value(self):
         return False
 
-    def initialize_diagnostic_return(self, tracker_list):
-        for tracker in tracker_list:
-            self.diagnostic_return[tracker]
+    def reset(self):
+        self.issues = False
+        for diagnostic in self.diagnostic_return:
+            self.diagnostic_return[diagnostic] = False
 
     def get_vals(self):
         return self.diagnostic_return, self.issues
+    
 
 class ControllerDirRunCheck(DiagnosticCheck):
 
@@ -203,6 +278,7 @@ class ControllerDirRunCheck(DiagnosticCheck):
         return self._diagnostic_names
 
     def diagnostic(self, doc):
+        super().diagnostic(doc)
         if "controller_dir" not in doc["_source"]["@metadata"]:
             self.diagnostic_return["missing_ctrl_dir"] = True
             self.issues = True
@@ -217,6 +293,7 @@ class SosreportRunCheck(DiagnosticCheck):
         return self._diagnostic_names
 
     def diagnostic(self, doc):
+        super().diagnostic(doc)
         # check if sosreports present
         if "sosreports" not in doc["_source"]:
             self.diagnostic_return["missing_sosreports"] = True
@@ -237,14 +314,17 @@ class SosreportRunCheck(DiagnosticCheck):
 
 class SeenResultCheck(DiagnosticCheck):
 
+    def __init__(self, results_seen : dict):
+        self.results_seen = results_seen
+
     _diagnostic_names = ["missing._id", "duplicate_result_id"]
 
     @property
     def diagnostic_names(self):
         return self._diagnostic_names
     
-    def diagnostic(self, doc, results_seen):
-
+    def diagnostic(self, doc):
+        super().diagnostic(doc)
         # first check if result doc has a result id field
         if "_id" not in doc:
             self.diagnostic_return["missing._id"] = True
@@ -255,11 +335,11 @@ class SeenResultCheck(DiagnosticCheck):
             # second check if result has been seen already
             # NOTE: not sure if this check is really necessary (whether
             # a case where duplicate results occur exists)
-            if result_id in results_seen:
+            if result_id in self.results_seen:
                 self.diagnostic_return["duplicate_result_id"] = True
                 self.issues = True
             else:
-                results_seen[result_id] = True
+                self.results_seen[result_id] = True
 
 class BaseResultCheck(DiagnosticCheck):
 
@@ -286,7 +366,6 @@ class BaseResultCheck(DiagnosticCheck):
         "missing._source/benchmark/max_stddevpct",
         "missing._source/benchmark/primary_metric",
         "missing._source/benchmark/rw",
-        
     ]
 
     @property
@@ -294,6 +373,7 @@ class BaseResultCheck(DiagnosticCheck):
         return self._diagnostic_names
 
     def diagnostic(self, doc):
+        super().diagnostic(doc)
         
         self.issues = True
         # unforunately very ugly if statement to check what
@@ -358,6 +438,7 @@ class RunNotInDataResultCheck(DiagnosticCheck):
         return self._diagnostic_names
 
     def diagnostic(self, doc):
+        super().diagnostic(doc)
         if doc["_source"]["run"]["id"] not in self.pbench_combined_data:
             self.diagnostic_return["run_not_in_data"] = True
             self.issues = True
@@ -384,6 +465,7 @@ class ClientHostAggregateResultCheck(DiagnosticCheck):
         return self._diagnostic_names
 
     def diagnostic(self, doc):
+        super().diagnostic(doc)
         if doc["_source"]["sample"]["client_hostname"] == "all":
             self.diagnostic_return["client_hostname_all"] = True
             self.issues = True

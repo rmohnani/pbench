@@ -311,7 +311,7 @@ def sentence_setify(sentence: str) -> str:
     """Splits input by ", " gets rid of duplicates and rejoins unique
     items into original format. Effectively removes duplicates in input.
     """
-    return ", ".join(set((sentence.split(", "))))
+    return ", ".join(set([word.strip() for word in sentence.split(",")]))
 
 
 def process_results(es, now, session, incoming_url, pool, pbench_runs, stats):
