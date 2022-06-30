@@ -1,11 +1,15 @@
 from abc import ABC, abstractmethod
 from collections import defaultdict
 import os
+from elasticsearch1 import Elasticsearch
+from elasticsearch1.helpers import scan
 
 class PbenchCombinedData:
     def __init__(self, diagnostic_checks):
         self.data = dict()
-        self.diagnostics = {"run" : dict(), "result": dict(), "fio-extraction": dict()}
+        self.diagnostics = {"run" : dict(), "result": dict(), 
+                            "fio_extraction": dict(),
+                            "client_side": dict()}
         self.diagnostic_checks = diagnostic_checks
     
     def add_run_data(self, doc):
@@ -108,9 +112,9 @@ class PbenchCombinedData:
         return ", ".join(set([word.strip() for word in sentence.split(",")]))
     
     def fio_screening_check(self, doc):
-        fio_extraction_diagnostic = self.diagnostics["fio-extraction"]
+        fio_extraction_diagnostic = self.diagnostics["fio_extraction"]
         invalid = False
-        for check in self.diagnostic_checks["fio-extraction"]:
+        for check in self.diagnostic_checks["fio_extraction"]:
             check.diagnostic(doc)
             diagnostic_update, issue = check.get_vals()
             fio_extraction_diagnostic.update(diagnostic_update)
@@ -134,7 +138,7 @@ class PbenchCombinedData:
         )
 
         self.fio_screening_check(url)
-        if self.diagnostics["fio-extraction"]["valid"] != True:
+        if self.diagnostics["fio_extraction"]["valid"] != True:
             # FIXME: are these results we still want?
             disknames, hostnames = ([], [])
         else:
@@ -158,10 +162,10 @@ class PbenchCombinedData:
 
         return (disknames, hostnames)
     
-    def add_host_and_disk_names(self, diskhost_map):
+    def add_host_and_disk_names(self, diskhost_map, incoming_url, session):
         key = f"{self.data['run_id']}/{self.data['iteration.name']}"
         if key not in diskhost_map:
-            disknames, hostnames = self.extract_fio_result(self.incoming_url, self.session)
+            disknames, hostnames = self.extract_fio_result(incoming_url, session)
             diskhost_map[key] = (disknames, hostnames)
         disknames, hostnames = diskhost_map[key]
         self.data.update(
@@ -171,21 +175,79 @@ class PbenchCombinedData:
             ]
         )
 
+    def client_diagnostic_check(self, clientnames):
+        client_diagnostic = self.diagnostics["client_side"]
+        invalid = False
+        for check in self.diagnostic_checks["client_side"]:
+            check.diagnostic(clientnames)
+            diagnostic_update, issue = check.get_vals()
+            client_diagnostic.update(diagnostic_update)
+            invalid |= issue
+        
+        client_diagnostic["valid"] = not invalid
+    
+    def extract_clients(self, es):
+        run_index = self.data["run_index"]
+        parent_id = self.data["run_id"]
+        iter_name = self.data["iteration.name"]
+        sample_name = self.data["sample.name"]
+        parent_dir_name = f"/{iter_name}/{sample_name}/clients"
+        query = {
+            "query": {
+                "query_string": {
+                    "query": f'_parent:"{parent_id}"'
+                    f' AND ancestor_path_elements:"{iter_name}"'
+                    f' AND ancestor_path_elements:"{sample_name}"'
+                    f" AND ancestor_path_elements:clients"
+                }
+            }
+        }
+
+        client_names_raw = []
+        for doc in scan(
+            es,
+            query=query,
+            index=run_index,
+            doc_type="pbench-run-toc-entry",
+            scroll="1m",
+            request_timeout=3600,  # to prevent timeout errors (3600 is arbitrary)
+        ):
+            src = doc["_source"]
+            if src["parent"] == parent_dir_name:
+                client_names_raw.append(src["name"])
+        # FIXME: if we have an empty list, do we still want to use those results?
+        return list(set(client_names_raw))
+
+    def add_client_names(self, clientnames_map, es):
+        key = self.data["run_id"]
+        if key not in clientnames_map:
+            client_names = self.extract_clients(es)
+            clientnames_map[key] = client_names
+        client_names = clientnames_map[key]
+
+        self.client_diagnostic_check(client_names)
+        if self.data["diagnostics"]["client_side"]["valid"] == True:
+            self.data["clientnames"] = client_names
+
+
 class PbenchCombinedDataCollection:
-    def __init__(self, incoming_url, session):
+    def __init__(self, incoming_url, session, es):
         self.run_id_to_data_valid = dict()
-        self.invalid = {"run": dict(), "result": dict()}
+        self.invalid = {"run": dict(), "result": dict(), "client_side": dict()}
         # not sure if this is really required but will follow current
         # implementation for now
         self.results_seen = dict()
+        self.es = es
         self.incoming_url = incoming_url
         self.session = session
-        self.trackers = {"run": dict(), "result": dict(), "fio-extraction": dict()}
+        self.trackers = {"run": dict(), "result": dict(), "fio_extraction": dict(), "client_side": dict()}
         self.diagnostic_checks = {"run": [ControllerDirRunCheck(), SosreportRunCheck()],
+                                    # TODO: need to fix order of these result checks to match the original      
                                     "result": [SeenResultCheck(self.results_seen), BaseResultCheck(),
                                                 RunNotInDataResultCheck(self.run_id_to_data_valid),
                                                 ClientHostAggregateResultCheck()],
-                                    "fio-extraction": [FioExtractionCheck(self.incoming_url, self.session)]}
+                                    "fio_extraction": [FioExtractionCheck(self.session)],
+                                    "client_side": [ClientNamesCheck()]}
         self.trackers_initialization()
         self.result_temp_id = 0
         self.diskhost_map = dict()
@@ -258,8 +320,14 @@ class PbenchCombinedDataCollection:
             associated_run_id = doc["_source"]["run"]["id"]
             associated_run = self.run_id_to_data_valid[associated_run_id]
             associated_run.add_result_data(doc, result_diagnostic_return)
-            associated_run.add_host_and_disk_names(self.diskhost_map)
-            # self.update_diagnostic_trackers(associated_run, "result")
+            associated_run.add_host_and_disk_names(self.diskhost_map, self.incoming_url, self.session)
+            self.update_diagnostic_trackers(associated_run.data["diagnostics"]["fio_extraction"], "fio_extraction")
+            associated_run.add_client_names(self.clientnames_map, self.es)
+            self.update_diagnostic_trackers(associated_run.data["diagnostics"]["client_side"], "client_side")
+            if associated_run.data["diagnostics"]["client_side"]["valid"] == False:
+                associated_run = self.run_id_to_data_valid.pop(associated_run_id)
+                self.invalid["client_side"][associated_run_id] = associated_run
+                self.trackers["result"]["valid"] -= 1
         else:
             doc.update({"diagnostics": {"result" : result_diagnostic_return}})
             if result_diagnostic_return["missing._id"] == False:
@@ -511,15 +579,36 @@ class FioExtractionCheck(DiagnosticCheck):
         # check if the page is accessible
         response = self.session.get(doc, allow_redirects=True)
         if response.status_code != 200:  # successful
-            self.diagnostic_names["session_response_unsuccessful"] = True
+            self.diagnostic_return["session_response_unsuccessful"] = True
             self.issues = True
         else:
             try:
                 response.json() 
             except ValueError:
-                self.diagnostic_names["response_invalid_json"] = True
+                self.diagnostic_return["response_invalid_json"] = True
                 self.issues = True
         
-            
+class ClientNamesCheck(DiagnosticCheck):
+
+    _diagnostic_names = ["0_clients",
+                        "2_or_more_clients"]
+
+    @property
+    def diagnostic_names(self):
+        return self._diagnostic_names
+
+    def diagnostic(self, doc):
+        #doc acting as clientnames
+        super().diagnostic(doc)
+        
+        # Ignore result if 0 or more than 1 client names
+        if not doc:
+            self.diagnostic_return["0_clients"] = True
+            self.issues = True
+        elif len(doc) > 1:
+            self.diagnostic_return["2_or_more_clients"] = True
+            self.issues = True
+        else:
+            pass
             
         

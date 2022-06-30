@@ -59,9 +59,10 @@ def merge_run_result_index(es, month, record_limit, pbench_data : PbenchCombined
         if record_limit != -1:
             if pbench_data.trackers["run"]["valid"] >= record_limit:
                 break
-    
+    # print("finish run data processing")
     for result_doc in es_data_gen(es, result_index, "pbench-result-data-sample"):
         pbench_data.add_result(result_doc)
+        # print("processed a result")
     
     return pbench_data
 
@@ -412,10 +413,15 @@ def main(args):
 
     scan_start = time.time()
     now = datetime.utcfromtimestamp(scan_start)
-    pbench_data = PbenchCombinedDataCollection()
+    pbench_data = PbenchCombinedDataCollection(incoming_url, session, es)
 
     for month in _month_gen(now):
         merge_run_result_index(es, month, args.record_limit, pbench_data)
+        if args.record_limit != -1:
+            if len(pbench_data.run_id_to_data_valid) >= args.record_limit:
+                break
+        # if len(pbench_data.run_id_to_data_valid) >= args.record_limit:
+        #     break
 
     # pbench_runs = load_pbench_runs(es, now, args.record_limit)
     
