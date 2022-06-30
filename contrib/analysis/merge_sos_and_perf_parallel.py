@@ -53,10 +53,17 @@ def paired_run_result_index_gen(month_gen):
 def merge_run_result_index(es, month, record_limit):
     run_index = f"dsa-pbench.v4.run.{month}"
     result_index = f"dsa-pbench.v4.result-data.{month}-*"
-    pbench_runs = PbenchCombinedData()
+    pbench_data = PbenchCombinedDataCollection()
 
-    for doc in es_data_gen(es, run_index, "pbench-run"):
-        pbench_runs.add_run(doc)
+    for run_doc in es_data_gen(es, run_index, "pbench-run"):
+        pbench_data.add_run(run_doc)
+        if pbench_data.trackers["run"]["valid"] >= record_limit:
+            break
+    
+    for result_doc in es_data_gen(es, result_index, "pbench-result-data-sample"):
+        pbench_data.add_result(result_doc)
+    
+    return pbench_data
 
     # for doc in es_data_gen(es, result_index, "pbench-result-data-sample"):
 
@@ -108,7 +115,8 @@ def load_pbench_runs(es, now: datetime, record_limit):
             break
     
     pbench_data.print_stats()
-    return pbench_data.get_runs()
+    # return pbench_data.get_runs()
+    return pbench_data
 
 # extract list of clients from the URL
 def extract_clients(results_meta, es):
@@ -404,33 +412,36 @@ def main(args):
 
     scan_start = time.time()
     now = datetime.utcfromtimestamp(scan_start)
+    pbench_data = merge_run_result_index(es, "2021-06", args.record_limit)
 
-    pbench_runs = load_pbench_runs(es, now, args.record_limit)
+    # pbench_runs = load_pbench_runs(es, now, args.record_limit)
+    
+    # result_cnt = 0
+    # stats = dict()
 
-    result_cnt = 0
-    stats = dict()
-
-    with open("sosreport_fio.txt", "w") as log, open("pbench_fio.json", "w") as outfile:
-        generator = process_results(
-            es, now, session, incoming_url, pool, pbench_runs, stats
-        )
-        for result in generator:
-            print(result)
-            print("\n")
-            result_cnt += 1
-            for sos in result["sosreports"].keys():
-                log.write("{}\n".format(sos))
-            log.flush()
-            outfile.write(json.dumps(result))
-            outfile.write("\n")
-            outfile.flush()
+    # with open("sosreport_fio.txt", "w") as log, open("pbench_fio.json", "w") as outfile:
+    #     generator = process_results(
+    #         es, now, session, incoming_url, pool, pbench_runs, stats
+    #     )
+    #     for result in generator:
+    #         print(result)
+    #         print("\n")
+    #         result_cnt += 1
+    #         for sos in result["sosreports"].keys():
+    #             log.write("{}\n".format(sos))
+    #         log.flush()
+    #         outfile.write(json.dumps(result))
+    #         outfile.write("\n")
+    #         outfile.flush()
 
     scan_end = time.time()
     duration = scan_end - scan_start
 
-    print(f"final number of records: {result_cnt:n}", flush=True)
-    print(json.dumps(stats, indent=4), flush=True)
-    print(f"--- merging run and result data took {duration:0.2f} seconds", flush=True)
+    print(pbench_data)
+    
+    # print(f"final number of records: {result_cnt:n}", flush=True)
+    # print(json.dumps(stats, indent=4), flush=True)
+    # print(f"--- merging run and result data took {duration:0.2f} seconds", flush=True)
 
     if memprof:
         print(

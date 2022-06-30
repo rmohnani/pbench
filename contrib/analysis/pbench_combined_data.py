@@ -108,7 +108,7 @@ class PbenchCombinedData:
         # diagnostic_update4, issues4 = fourth_result_check.get_vals()
         # result_diagnostic.update(diagnostic_update4)
         # invalid |= issues4
-        self.data["diagnostic"]["result"] = result_diagnostic
+        self.data["diagnostics"]["result"] = result_diagnostic
         if result_diagnostic["valid"] == True:
             self.data.update(
                 [
@@ -146,7 +146,7 @@ class PbenchCombinedData:
         
         print(self.data)
 
-    def sentence_setify(sentence: str) -> str:
+    def sentence_setify(self, sentence: str) -> str:
         """Splits input by ", " gets rid of duplicates and rejoins unique
         items into original format. Effectively removes duplicates in input.
         """
@@ -166,7 +166,17 @@ class PbenchCombinedDataCollection:
         self.result_temp_id = 1
         # not sure if this is really required but will follow current
         # implementation for now
-
+    
+    def __str__(self):
+        return str("---------------\n" +
+            "Valid Data: \n" +
+            str(self.run_id_to_data_valid) + "\n" +
+            # "Results Seen: \n" +
+            # str(self.results_seen) + "\n" +
+            "Results Seen: " + str(len(self.results_seen)) + "\n" +
+            "Diagnostic Checks Used: \n" + str(self.diagnostic_checks) + "\n" +
+            "Trackers: \n" +
+            str(self.trackers))
     
     def trackers_initialization(self):
         for type in self.diagnostic_checks:
@@ -183,7 +193,7 @@ class PbenchCombinedDataCollection:
         self.trackers[type]["total_records"] += 1
         for diagnostic in type_diagnostic:
             if type_diagnostic[diagnostic] == True:
-                self.trackers["run"][diagnostic] += 1
+                self.trackers[type][diagnostic] += 1
                 
         
     def print_stats(self):
@@ -225,7 +235,7 @@ class PbenchCombinedDataCollection:
             associated_run.add_result_data(doc, result_diagnostic_return)
             self.update_diagnostic_trackers(associated_run, "result")
         else:
-            doc.update({"diagnostic", result_diagnostic_return})
+            doc.update({"diagnostic": result_diagnostic_return})
             if result_diagnostic_return["missing._id"] == False:
                 self.invalid["result"][result_diagnostic_return["missing._id"]] = doc
             else:
@@ -249,7 +259,7 @@ class DiagnosticCheck(ABC):
     # appropriately updates instance variables 
     @abstractmethod
     def diagnostic(self, doc):
-        self.reset()
+        self.initialize_properties()
     
     def initialize_properties(self):
         self.diagnostic_return = defaultdict(self.default_value)
@@ -259,11 +269,6 @@ class DiagnosticCheck(ABC):
     
     def default_value(self):
         return False
-
-    def reset(self):
-        self.issues = False
-        for diagnostic in self.diagnostic_return:
-            self.diagnostic_return[diagnostic] = False
 
     def get_vals(self):
         return self.diagnostic_return, self.issues
