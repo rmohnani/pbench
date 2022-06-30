@@ -324,10 +324,10 @@ class PbenchCombinedDataCollection:
             self.update_diagnostic_trackers(associated_run.data["diagnostics"]["fio_extraction"], "fio_extraction")
             associated_run.add_client_names(self.clientnames_map, self.es)
             self.update_diagnostic_trackers(associated_run.data["diagnostics"]["client_side"], "client_side")
-            if associated_run.data["diagnostics"]["client_side"]["valid"] == False:
-                associated_run = self.run_id_to_data_valid.pop(associated_run_id)
-                self.invalid["client_side"][associated_run_id] = associated_run
-                self.trackers["result"]["valid"] -= 1
+            # if associated_run.data["diagnostics"]["client_side"]["valid"] == False:
+                # associated_run = self.run_id_to_data_valid.pop(associated_run_id)
+                # self.invalid["client_side"][associated_run_id] = associated_run
+                # self.trackers["result"]["valid"] -= 1
         else:
             doc.update({"diagnostics": {"result" : result_diagnostic_return}})
             if result_diagnostic_return["missing._id"] == False:
