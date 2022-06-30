@@ -144,7 +144,7 @@ class PbenchCombinedData:
             self.data["benchmark.sync"] = benchmark.get("sync", "none")
             self.data["benchmark.time_based"] = benchmark.get("time_based", "none")
         
-        print(self.data)
+        # print(self.data)
 
     def sentence_setify(self, sentence: str) -> str:
         """Splits input by ", " gets rid of duplicates and rejoins unique
@@ -169,12 +169,12 @@ class PbenchCombinedDataCollection:
     
     def __str__(self):
         return str("---------------\n" +
-            "Valid Data: \n" +
-            str(self.run_id_to_data_valid) + "\n" +
+            # "Valid Data: \n" +
+            # str(self.run_id_to_data_valid) + "\n" +
             # "Results Seen: \n" +
             # str(self.results_seen) + "\n" +
-            "Results Seen: " + str(len(self.results_seen)) + "\n" +
-            "Diagnostic Checks Used: \n" + str(self.diagnostic_checks) + "\n" +
+            # "Results Seen: " + str(len(self.results_seen)) + "\n" +
+            # "Diagnostic Checks Used: \n" + str(self.diagnostic_checks) + "\n" +
             "Trackers: \n" +
             str(self.trackers))
     
@@ -186,13 +186,13 @@ class PbenchCombinedDataCollection:
                 for name in check.diagnostic_names:
                     self.trackers[type].update({name: 0})
 
-    def update_diagnostic_trackers(self, record : PbenchCombinedData, type : str):
+    def update_diagnostic_trackers(self, diagnsotic_data : dict, type : str):
         # allowed types: "run", "result"
-        type_diagnostic = record.data["diagnostics"][type]
+        # type_diagnostic = record.data["diagnostics"][type]
         # update trackers based on run_diagnostic data collected
         self.trackers[type]["total_records"] += 1
-        for diagnostic in type_diagnostic:
-            if type_diagnostic[diagnostic] == True:
+        for diagnostic in diagnsotic_data:
+            if diagnsotic_data[diagnostic] == True:
                 self.trackers[type][diagnostic] += 1
                 
         
@@ -206,7 +206,7 @@ class PbenchCombinedDataCollection:
     def add_run(self, doc):
         new_run = PbenchCombinedData(self.diagnostic_checks)
         new_run.add_run_data(doc)
-        self.update_diagnostic_trackers(new_run, "run")
+        self.update_diagnostic_trackers(new_run.data["diagnostics"]["run"], "run")
         run_id = new_run.data["run_id"]
         if new_run.data["diagnostics"]["run"]["valid"] == True:
             self.run_id_to_data_valid[run_id] = new_run
@@ -229,11 +229,12 @@ class PbenchCombinedDataCollection:
     
     def add_result(self, doc):
         result_diagnostic_return = self.result_screening_check(doc)
+        self.update_diagnostic_trackers(result_diagnostic_return, "result")
         if result_diagnostic_return["valid"] == True:
             associated_run_id = doc["_source"]["run"]["id"]
             associated_run = self.run_id_to_data_valid[associated_run_id]
             associated_run.add_result_data(doc, result_diagnostic_return)
-            self.update_diagnostic_trackers(associated_run, "result")
+            # self.update_diagnostic_trackers(associated_run, "result")
         else:
             doc.update({"diagnostic": result_diagnostic_return})
             if result_diagnostic_return["missing._id"] == False:

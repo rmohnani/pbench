@@ -50,15 +50,15 @@ def paired_run_result_index_gen(month_gen):
         result_index = f"dsa-pbench.v4.result-data.{month}-*"
         # yield run_index, result_index
 
-def merge_run_result_index(es, month, record_limit):
+def merge_run_result_index(es, month, record_limit, pbench_data : PbenchCombinedDataCollection):
     run_index = f"dsa-pbench.v4.run.{month}"
     result_index = f"dsa-pbench.v4.result-data.{month}-*"
-    pbench_data = PbenchCombinedDataCollection()
 
     for run_doc in es_data_gen(es, run_index, "pbench-run"):
         pbench_data.add_run(run_doc)
-        if pbench_data.trackers["run"]["valid"] >= record_limit:
-            break
+        if record_limit != -1:
+            if pbench_data.trackers["run"]["valid"] >= record_limit:
+                break
     
     for result_doc in es_data_gen(es, result_index, "pbench-result-data-sample"):
         pbench_data.add_result(result_doc)
@@ -412,7 +412,10 @@ def main(args):
 
     scan_start = time.time()
     now = datetime.utcfromtimestamp(scan_start)
-    pbench_data = merge_run_result_index(es, "2021-06", args.record_limit)
+    pbench_data = PbenchCombinedDataCollection()
+
+    for month in _month_gen(now):
+        merge_run_result_index(es, month, args.record_limit, pbench_data)
 
     # pbench_runs = load_pbench_runs(es, now, args.record_limit)
     
@@ -441,7 +444,7 @@ def main(args):
     
     # print(f"final number of records: {result_cnt:n}", flush=True)
     # print(json.dumps(stats, indent=4), flush=True)
-    # print(f"--- merging run and result data took {duration:0.2f} seconds", flush=True)
+    print(f"--- merging run and result data took {duration:0.2f} seconds", flush=True)
 
     if memprof:
         print(
@@ -458,7 +461,7 @@ def parse_arguments():
     parser.add_argument("url_prefix", action="store", type=str, help="Pbench server url prefix to extract host and disk names")
     # parser.add_argument("sosreport_host_server", action="store" ,dest="sos_host", type=str, help="Sosreport host server to access sosreport info")
     parser.add_argument("--cpu", action='store', dest="cpu_n", type=int, default=1, help="Number of CPUs to be used")
-    parser.add_argument("--limit", action='store', dest="record_limit", type=int, default=10, help="Number of desired acceptable results for processing")
+    parser.add_argument("--limit", action='store', dest="record_limit", type=int, default=-1, help="Number of desired acceptable results for processing")
     # TODO: need to figure out how to allow both limiting and non-limiting options with argparse. But suppose would never want to limit in real use case.
     parser.add_argument("--profile", action='store_true', dest="profile_memory_usage", help="Want memory usage profile")
     args = parser.parse_args()
