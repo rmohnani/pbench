@@ -5,7 +5,7 @@ import os
 class PbenchCombinedData:
     def __init__(self, diagnostic_checks):
         self.data = dict()
-        self.diagnostics = {"run" : dict(), "result": dict()}
+        self.diagnostics = {"run" : dict(), "result": dict(), "fio-extraction": dict()}
         self.diagnostic_checks = diagnostic_checks
     
     def add_run_data(self, doc):
@@ -64,50 +64,7 @@ class PbenchCombinedData:
     #         self.data.update(property, value)
     
     def add_result_data(self, doc, result_diagnostic):
-        self.transform_result(doc, result_diagnostic)
-    
-    def transform_result(self, doc, result_diagnostic):
 
-        # # Diagnostic checks and data collection
-        # result_diagnostic = self.diagnostics["result"]
-        # invalid = False
-
-        # # create run_diagnostic data for all checks
-        # for check in self.diagnostic_checks["result"]:
-        #     check.diagnostic(doc)
-        #     diagnostic_update, issue = check.get_vals()
-        #     result_diagnostic.update(diagnostic_update)
-        #     invalid |= issue
-
-        # # NOTE: These checks can't be put into loop in current form
-        # # because ordering and different requirements of params
-        # # first check result not already seen before
-        # first_result_check = SeenResultCheck()
-        # first_result_check.diagnostic(doc, results_seen)
-        # diagnostic_update1, issues1 = first_result_check.get_vals()
-        # result_diagnostic.update(diagnostic_update1)
-        # invalid |= issues1
-
-        # # second check for all required fields/properties existence
-        # second_result_check = BaseResultCheck()
-        # second_result_check.diagnostic(doc)
-        # diagnostic_update2, issues2 = second_result_check.get_vals()
-        # result_diagnostic.update(diagnostic_update2)
-        # invalid |= issues2
-
-        # # third check if runs are missing
-        # third_result_check = RunNotInDataResultCheck(all_data)
-        # third_result_check.diagnostic(doc)
-        # diagnostic_update3, issues3 = third_result_check.get_vals()
-        # result_diagnostic.update(diagnostic_update3)
-        # invalid |= issues3
-
-        # # fourth check if runs are missing
-        # fourth_result_check = ClientHostAggregateResultCheck()
-        # fourth_result_check.diagnostic(doc)
-        # diagnostic_update4, issues4 = fourth_result_check.get_vals()
-        # result_diagnostic.update(diagnostic_update4)
-        # invalid |= issues4
         self.data["diagnostics"]["result"] = result_diagnostic
         if result_diagnostic["valid"] == True:
             self.data.update(
@@ -143,29 +100,96 @@ class PbenchCombinedData:
             self.data["benchmark.runtime"] = benchmark.get("runtime", "none")
             self.data["benchmark.sync"] = benchmark.get("sync", "none")
             self.data["benchmark.time_based"] = benchmark.get("time_based", "none")
-        
-        # print(self.data)
 
     def sentence_setify(self, sentence: str) -> str:
         """Splits input by ", " gets rid of duplicates and rejoins unique
         items into original format. Effectively removes duplicates in input.
         """
         return ", ".join(set([word.strip() for word in sentence.split(",")]))
+    
+    def fio_screening_check(self, doc):
+        fio_extraction_diagnostic = self.diagnostics["fio-extraction"]
+        invalid = False
+        for check in self.diagnostic_checks["fio-extraction"]:
+            check.diagnostic(doc)
+            diagnostic_update, issue = check.get_vals()
+            fio_extraction_diagnostic.update(diagnostic_update)
+            invalid |= issue
+        
+        fio_extraction_diagnostic["valid"] = not invalid
+    
+    def extract_fio_result(self, incoming_url, session):
+        
+        url = (
+            incoming_url
+            + self.data["controller_dir"]
+            + "/"
+            + self.data["run.name"]
+            + "/"
+            + self.data["iteration.name"]
+            + "/"
+            + self.data["sample.name"]
+            + "/"
+            + "fio-result.txt"
+        )
+
+        self.fio_screening_check(url)
+        if self.diagnostics["fio-extraction"]["valid"] != True:
+            # FIXME: are these results we still want?
+            disknames, hostnames = ([], [])
+        else:
+            response = session.get(url, allow_redirects=True)
+            document = response.json()
+            try:
+                disk_util = document["disk_util"]
+            except KeyError:
+                disknames = []
+            else:
+                disknames = [disk["name"] for disk in disk_util if "name" in disk]
+
+            try:
+                client_stats = document["client_stats"]
+            except KeyError:
+                hostnames = []
+            else:
+                hostnames = list(
+                    set([host["hostname"] for host in client_stats if "hostname" in host])
+                )
+
+        return (disknames, hostnames)
+    
+    def add_host_and_disk_names(self, diskhost_map):
+        key = f"{self.data['run_id']}/{self.data['iteration.name']}"
+        if key not in diskhost_map:
+            disknames, hostnames = self.extract_fio_result(self.incoming_url, self.session)
+            diskhost_map[key] = (disknames, hostnames)
+        disknames, hostnames = diskhost_map[key]
+        self.data.update(
+            [
+                ("disknames", disknames),
+                ("hostnames", hostnames)
+            ]
+        )
 
 class PbenchCombinedDataCollection:
-    def __init__(self):
+    def __init__(self, incoming_url, session):
         self.run_id_to_data_valid = dict()
         self.invalid = {"run": dict(), "result": dict()}
+        # not sure if this is really required but will follow current
+        # implementation for now
         self.results_seen = dict()
-        self.trackers = {"run": dict(), "result": dict()}
+        self.incoming_url = incoming_url
+        self.session = session
+        self.trackers = {"run": dict(), "result": dict(), "fio-extraction": dict()}
         self.diagnostic_checks = {"run": [ControllerDirRunCheck(), SosreportRunCheck()],
                                     "result": [SeenResultCheck(self.results_seen), BaseResultCheck(),
                                                 RunNotInDataResultCheck(self.run_id_to_data_valid),
-                                                ClientHostAggregateResultCheck()]}
+                                                ClientHostAggregateResultCheck()],
+                                    "fio-extraction": [FioExtractionCheck(self.incoming_url, self.session)]}
         self.trackers_initialization()
-        self.result_temp_id = 1
-        # not sure if this is really required but will follow current
-        # implementation for now
+        self.result_temp_id = 0
+        self.diskhost_map = dict()
+        self.clientnames_map = dict()
     
     def __str__(self):
         return str("---------------\n" +
@@ -234,13 +258,15 @@ class PbenchCombinedDataCollection:
             associated_run_id = doc["_source"]["run"]["id"]
             associated_run = self.run_id_to_data_valid[associated_run_id]
             associated_run.add_result_data(doc, result_diagnostic_return)
+            associated_run.add_host_and_disk_names(self.diskhost_map)
             # self.update_diagnostic_trackers(associated_run, "result")
         else:
-            doc.update({"diagnostic": result_diagnostic_return})
+            doc.update({"diagnostics": {"result" : result_diagnostic_return}})
             if result_diagnostic_return["missing._id"] == False:
                 self.invalid["result"][result_diagnostic_return["missing._id"]] = doc
             else:
                 self.invalid["result"]["missing_so_temo_id_" + str(self.result_temp_id)] = doc
+                self.result_temp_id += 1
     
     def get_runs(self):
         return self.run_id_to_data_valid
@@ -449,19 +475,6 @@ class RunNotInDataResultCheck(DiagnosticCheck):
             self.diagnostic_return["run_not_in_data"] = True
             self.issues = True
 
-# class MeanNotInSampleResultCheck(DiagnosticCheck):
-
-#     _diagnostic_names = ["mean_not_in_sample"]
-
-#     @property
-#     def diagnostic_names(self):
-#         return self._diagnostic_names
-
-#     def diagnostic(self, doc):
-#         if "mean" not in doc["_source"]["sample"]:
-#             self.diagnostic_return["mean_not_in_sample"] = True
-#             self.issues = True
-
 class ClientHostAggregateResultCheck(DiagnosticCheck):
     # aggregate_result not sure what this is checking
     _diagnostic_names = ["client_hostname_all"]
@@ -477,4 +490,36 @@ class ClientHostAggregateResultCheck(DiagnosticCheck):
             self.issues = True
 
 
+class FioExtractionCheck(DiagnosticCheck):
 
+    def __init__(self, session):
+        self.session = session
+        # FIXME: are these results we still want in failure cases?
+        self.disk_host_names = ([],[])
+
+    _diagnostic_names = ["session_response_unsuccessful",
+                        "response_invalid_json"]
+
+    @property
+    def diagnostic_names(self):
+        return self._diagnostic_names
+
+    def diagnostic(self, doc):
+        #doc acting as url
+        super().diagnostic(doc)
+        
+        # check if the page is accessible
+        response = self.session.get(doc, allow_redirects=True)
+        if response.status_code != 200:  # successful
+            self.diagnostic_names["session_response_unsuccessful"] = True
+            self.issues = True
+        else:
+            try:
+                response.json() 
+            except ValueError:
+                self.diagnostic_names["response_invalid_json"] = True
+                self.issues = True
+        
+            
+            
+        
