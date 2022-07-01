@@ -8,23 +8,41 @@ from elasticsearch1 import Elasticsearch
 from elasticsearch1.helpers import scan
 
 class PbenchCombinedData:
-    """
-    This Class serves as a container class for all pbench data collected
-    from run indexes, result indexes, disk and host names, client names, and
-    sosreports. 
-    """
-    def __init__(self, diagnostic_checks : dict()) -> None:
-        """
-        This initializes the self.data dictionary which will contain
-        all the associated data mentioned above together. 
-        It stores the diagnostic_checks passed in as an instance variable,
-        so it has knowledge of what diagnostics to perform on incoming data. 
-        It also has a self.diagnostics dict to store the results of the diagnostic
-        checks performed - this is eventually added to the self.data dict.
+    """Container object for all pbench data associated with each other.
 
-        diagnostic_checks: Mapping of diagnostic_type (ie run, result, etc)
-                       to list of concrete instances of the DiagnosticCheck
-                       abstract class.
+    This Class serves as a container class for 1 'run' record and all 
+    associated result data, disk and host names, client names, sosreports,
+    and diagnostic information regarding each of these data.
+
+    Attributes
+    ----------
+    data : dict
+        Map from data properties to values.
+        Contains all associated data mentioned above.
+    diagnostic_checks : dict
+        Map from data type (ie run, result, etc) to
+        list of concrete instances of the DiagnosticCheck
+        abstract class specifying checks to perform
+    diagnostics : dict
+        Map from data type to dictionary containing results
+        from checks specified in diagnostic_checks. This is
+        eventually added to data.
+
+    """
+
+    def __init__(self, diagnostic_checks : dict()) -> None:
+        """This initializes all the class attributes specified above
+
+        Creates data and diagnostics attributes, but stores the param
+        passed in as the diagnostic_checks attribute value
+
+        Parameters
+        ----------
+        diagnostic_checks : dict
+            Map from data type (ie run, result, etc) to
+            list of concrete instances of the DiagnosticCheck
+            abstract class specifying checks to perform
+
         """
         # FIXME: Keeping data and diagnostics separate for now, because might
         # want to increase generalizability for diagnostic specifications
@@ -35,12 +53,29 @@ class PbenchCombinedData:
         self.diagnostic_checks = diagnostic_checks
 
     def data_check(self, doc, type : str) -> None:
-        """
+        """Performs checks of the specified type on doc and updates diagnostics attribute
+
         This performs all the checks of the diagnostic type passed in
         on the doc passed in and updates the specific type's diagnostic
         data in self.diagnostics.
-        doc: the data source passed in (could be run doc, result doc, etc)
-        type: the diagnostic type (ie "run", "result", "fio_extraction", etc)
+
+        Parameters
+        ----------
+        doc 
+            The data source passed in required for the check
+            For run type doc is json data
+            For result type doc is json data
+            For fio_extraction type doc is a url string
+            For client_side type doc is a list of clientnames
+        type : str
+            The diagnostic type corresponding to the type of
+            data passed in.
+            options: "run", "result", "fio_extraction", "client_side"
+
+        Returns
+        -------
+        None
+
         """
         type_diagnostic = self.diagnostics[type]
         # if any of the checks fail, invalid is set to True
@@ -56,11 +91,21 @@ class PbenchCombinedData:
         type_diagnostic["valid"] = not invalid
     
     def add_run_data(self, doc) -> None:
-        """
-        Given a run doc, performs the specified diagnostic checks,
+        """ Given a run doc, processes it and adds it to self.data
+
+        Given a run doc, performs the specified run type diagnostic checks,
         stores the diagnostic data, and filters down the data to a
         desired subset and format. Filtered data stored in self.data
-        doc: a run type document/data
+        
+        Parameters
+        ----------
+        doc : json
+            json run data from a run doc in a run type index in elasticsearch
+ 
+        Returns
+        -------
+        None
+
         """
         run_diagnostic = self.diagnostics["run"]
 
@@ -104,15 +149,21 @@ class PbenchCombinedData:
         })
     
     def add_result_data(self, doc, result_diagnostic : dict) -> None:
-        """
-        Given a result doc, and its diagnostic data, updates the 
-        internal store of the result diagnostic data, filters down
-        and reformats result data and adds it to the existing run
-        data in self.data
-        doc: result type document/data
-        result_diagnostic: dictionary from result diagnostic to value
+        """ Given a result doc, processes it and adds it to self.data
 
-        NOTE: result diagnostic checks need to be performed ahead of
+        Given a result doc, performs the specified result type diagnostic checks,
+        stores the diagnostic data, and filters down the data to a
+        desired subset and format. Filtered data added to exiting run data in
+        self.data
+        
+        Parameters
+        ----------
+        doc : json
+            json result data from a result doc in a result type index in elasticsearch
+        result_diagnostic : dict
+            dictionary from result diagnostic property to value
+
+            NOTE: result diagnostic checks need to be performed ahead of
               time in the PbenchCombinedDataCollection Object. This is
               because one check accounts for the case that a result data
               has no associated run. So we need to check that there is a
@@ -120,7 +171,13 @@ class PbenchCombinedData:
               PbenchCombinedData Object and adding the result to it. We
               also do this because even if record isn't valid and can't be
               added we still need to track the diagnostic info.
+ 
+        Returns
+        -------
+        None
+        
         """
+
         # sets result diagnostic data internally
         self.diagnostics["result"] = result_diagnostic
         # since this function will only be called on valid docs
@@ -163,20 +220,45 @@ class PbenchCombinedData:
         self.data["benchmark.time_based"] = benchmark.get("time_based", "none")
 
     def sentence_setify(self, sentence: str) -> str:
-        """Splits input by ", " gets rid of duplicates and rejoins unique
-        items into original format. Effectively removes duplicates in input.
+        """Effectively removes duplicates in input string.
+        
+        Splits input by ", " gets rid of duplicates and rejoins unique
+        items into original format.
+
+        Parameters
+        ----------
+        sentence : str
+            input string to remove duplicates from 
+ 
+        Returns
+        -------
+        None
+
         """
+
         return ", ".join(set([word.strip() for word in sentence.split(",")]))
     
     def extract_fio_result(self, incoming_url : str, session : Session) -> Tuple[list, list]:
-        """
+        """This returns disknames and hostnames associated with data stored.
+
         Given an incoming_url it generates the specific url based on the data stored and performs
         diagnostic checks specified. If successful it attempts to get diskname and
         hostname data from the response object from the request sent to the url.
-        incoming_url: pbench server url prefix to fetch unpacked data
-        session: A session to make request to url
-        returns: Tuple of list of disknames and list of hostnames
+
+        Parameters
+        ----------
+        incoming_url : str
+            pbench server url prefix to fetch unpacked data
+        session : Session
+            A session to make request to url
+
+        Returns
+        -------
+        diskhost_names : tuple[list[str], list[str]]
+            Tuple of list of disknames and list of hostnames
+
         """
+        
         # TODO: Why is this the url required. Would this be different in any case?
         #       Does this need to be more general?
         url = (
@@ -202,6 +284,7 @@ class PbenchCombinedData:
             response = session.get(url, allow_redirects=True)
             document = response.json()
             # from disk_util and client_stats get diskname and clientname info
+            # NOTE: Not sure if its better to use try-excepts or if-else
             try:
                 disk_util = document["disk_util"]
             except KeyError:
@@ -221,12 +304,23 @@ class PbenchCombinedData:
         return (disknames, hostnames)
     
     def add_host_and_disk_names(self, diskhost_map : dict, incoming_url : str, session: Session) -> None:
+        """Adds the disk and host names to the self.data dict.
+
+        Parameters
+        ----------
+        diskhost_map : dict
+            maps run id and iteration name to tuple of disk and host names
+        incoming_url: str
+            pbench server url prefix to fetch unpacked data
+        session : Session
+            A session to make request to url
+
+        Returns
+        -------
+        None
+
         """
-        Adds the disk and host names to the self.data dict.
-        incoming_url: pbench server url prefix to fetch unpacked data
-        session: A session to make request to url
-        diskhost_map: maps run id and iteration name to disk and host names
-        """
+
         # combination of run_id and iteration.name used as key for diskhost_map
         key = f"{self.data['run_id']}/{self.data['iteration.name']}"
         # if not in map finds it using extract_fio_result and adds it to dict
@@ -246,13 +340,20 @@ class PbenchCombinedData:
         )
     
     def extract_clients(self, es : Elasticsearch) -> list[str]:
+        """Given run and result data already stored returns a list of unique raw client names
+       
+        Parameters
+        ----------
+        es : Elasticsearch
+            Elasticsearch object where data is stored
+
+        Returns
+        -------
+        client_names : list[str]
+            list of unique raw client names
+
         """
-        Given that self.data already contains the run and
-        result data, this function finds and returns a list
-        of unique raw client names.
-        es: Elasticsearch object
-        returns: list of unique raw client names
-        """
+
         # TODO: Need to determine how specific this part is and
         #       whether it can be different or more general
         run_index = self.data["run_index"]
@@ -287,12 +388,21 @@ class PbenchCombinedData:
         return list(set(client_names_raw))
 
     def add_client_names(self, clientnames_map : dict, es : Elasticsearch) -> None:
+        """Adds clientnames to data stored if checks passed.
+        
+        Parameters
+        ----------
+        clientnames_map: dict
+            map from run_id to list of client names
+        es : Elasticsearch
+            Elasticsearch object where data is stored
+
+        Returns
+        -------
+        None
+        
         """
-        This adds the associated clientnames to self.data only if
-        it passes the checks specified
-        clientnames_map: map from run_id to list of client names
-        es: Elasticsearch object where data is stored
-        """
+
         key = self.data["run_id"]
         # if we haven't seen this run_id before, extract client names
         # and add it to map (because clients associated with a run_id
@@ -308,7 +418,23 @@ class PbenchCombinedData:
             self.data["clientnames"] = client_names
 
 class PbenchCombinedDataCollection:
-    def __init__(self, incoming_url, session, es):
+    """
+    This serves as a wrapper class for a collection of PbenchCombinedData
+    Objects. It has methods that keep track of statistics for all diagnostic
+    checks used over all the data added to the collection.
+    """
+    def __init__(self, incoming_url : str, session : Session, es : Elasticsearch) -> None:
+        """
+        Initialization function.
+        Creates a map - self.run_id_to_data_valid - from valid run_id to a PbenchCombinedData
+        Creates a map - self.invalid - from data_type (ie run, result) to invalid_data_id to invalid data as a dict
+        Creates a map - self.results_seen - from result_id to True if encountered
+        Stores inputs passed in, in instance variables.
+        Creates a map - self.trackers - 
+        incoming_url: pbench server url prefix to fetch unpacked data (used for fio extraction)
+        session: A session to make request to url (used for fio extraction)
+        es: Elasticsearch object where data is stored (used for clientname extraction)
+        """
         self.run_id_to_data_valid = dict()
         self.invalid = {"run": dict(), "result": dict(), "client_side": dict()}
         # not sure if this is really required but will follow current
@@ -339,7 +465,8 @@ class PbenchCombinedDataCollection:
             # "Results Seen: " + str(len(self.results_seen)) + "\n" +
             # "Diagnostic Checks Used: \n" + str(self.diagnostic_checks) + "\n" +
             "Trackers: \n" +
-            str(self.trackers))
+            str(self.trackers) +
+            "---------------\n")
     
     def trackers_initialization(self):
         for type in self.diagnostic_checks:
