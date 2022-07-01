@@ -709,31 +709,98 @@ class PbenchCombinedDataCollection:
 
  
 class DiagnosticCheck(ABC):
+    """Abstract class that provides template for writing custom checks.
+
+    Attributes
+    ----------
+    diagnostic_return : dict
+        A default dictionary with the default value being False.
+        Assumption is all diagnostic checks evaluate to either
+        True or False and written such that True means an error.
+        So this then assumes every record is initially valid.
+    issues : bool
+        False if doc is valid, True otherwise 
+    
+    """
 
     def __init__(self):
+        """Calls initialize_properties to initialize instance variables
+        """
         self.initialize_properties()
     
     @property
     @abstractmethod
-    def diagnostic_names(self):
-        "Define me!"
-        pass
+    def diagnostic_names(self) -> list:
+        """An attribute diagnostic_names specifying properties to check to be defined
+
+        Returns
+        -------
+        diagnostic_names : list[str]
+            List of names of properties the check is checking. Needs to be 
+            defined by extending concrete classes
+            
+        """
+        ...
  
     # appropriately updates instance variables 
     @abstractmethod
-    def diagnostic(self, doc):
+    def diagnostic(self, doc) -> None:
+        """Function specifying how to perform diagnostic to be implemented by extending classes.
+
+        Resets the value of attributes. This so that the same check
+        object can be used for multiple docs.
+        NOTE: Not sure if this is the best way to do it. But don't
+              want to create a new check object everytime as I
+              assume that takes more memory and time? Not sure.
+
+        Returns
+        -------
+        None
+        
+        """
         self.initialize_properties()
     
-    def initialize_properties(self):
+    def initialize_properties(self) -> None:
+        """Initializes all attributes specified above.
+
+        Creates a dictionary with default value False,
+        and uses the diagnostic_names to be defined by the
+        extending class to populate it. Sets issues to False,
+        setting initially record to be valid.
+        
+        Returns
+        -------
+        None
+
+        """
         self.diagnostic_return = defaultdict(self.default_value)
         self.issues = False
         for tracker in self.diagnostic_names:
             self.diagnostic_return[tracker]
     
-    def default_value(self):
+    def default_value(self) -> bool:
+        """Function defining default value for diagnostic_return to be False.
+
+        NOTE: This is just False because of the way we set up the diagnostic
+              checks. If we were to be more general and allow non boolean checks,
+              this would need to be different. Look into more general way of doing
+              this. - Generability/Extensibility
+
+        Returns
+        -------
+        bool
+
+        """
         return False
 
     def get_vals(self):
+        """Retruns the diagnostic_return and issues attributes
+        
+        Returns
+        -------
+        vals : tuple[dict, bool]
+            A tuple of the diagnostic_return and issues attributes
+        """
         return self.diagnostic_return, self.issues
     
 
