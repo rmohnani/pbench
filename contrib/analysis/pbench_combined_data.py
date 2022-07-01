@@ -1,36 +1,76 @@
 from abc import ABC, abstractmethod
 from collections import defaultdict
 import os
+
+from requests import Session
+from typing import Tuple
 from elasticsearch1 import Elasticsearch
 from elasticsearch1.helpers import scan
 
 class PbenchCombinedData:
-    def __init__(self, diagnostic_checks):
+    """
+    This Class serves as a container class for all pbench data collected
+    from run indexes, result indexes, disk and host names, client names, and
+    sosreports. 
+    """
+    def __init__(self, diagnostic_checks : dict()) -> None:
+        """
+        This initializes the self.data dictionary which will contain
+        all the associated data mentioned above together. 
+        It stores the diagnostic_checks passed in as an instance variable,
+        so it has knowledge of what diagnostics to perform on incoming data. 
+        It also has a self.diagnostics dict to store the results of the diagnostic
+        checks performed - this is eventually added to the self.data dict.
+
+        diagnostic_checks: Mapping of diagnostic_type (ie run, result, etc)
+                       to list of concrete instances of the DiagnosticCheck
+                       abstract class.
+        """
+        # FIXME: Keeping data and diagnostics separate for now, because might
+        # want to increase generalizability for diagnostic specifications
         self.data = dict()
         self.diagnostics = {"run" : dict(), "result": dict(), 
                             "fio_extraction": dict(),
                             "client_side": dict()}
         self.diagnostic_checks = diagnostic_checks
-    
-    def add_run_data(self, doc):
-        # print("doc: \n")
-        # print(doc)
-        run_diagnostic = self.diagnostics["run"]
 
-        run = doc["_source"]
-        run_id = run["@metadata"]["md5"]
-
+    def data_check(self, doc, type : str) -> None:
+        """
+        This performs all the checks of the diagnostic type passed in
+        on the doc passed in and updates the specific type's diagnostic
+        data in self.diagnostics.
+        doc: the data source passed in (could be run doc, result doc, etc)
+        type: the diagnostic type (ie "run", "result", "fio_extraction", etc)
+        """
+        type_diagnostic = self.diagnostics[type]
+        # if any of the checks fail, invalid is set to True
         invalid = False
-        # create run_diagnostic data for all checks
-        for check in self.diagnostic_checks["run"]:
+        # create type_diagnostic data for all checks
+        for check in self.diagnostic_checks[type]:
             check.diagnostic(doc)
             diagnostic_update, issue = check.get_vals()
-            run_diagnostic.update(diagnostic_update)
+            type_diagnostic.update(diagnostic_update)
             invalid |= issue
 
-        run_diagnostic["valid"] = not invalid
+        # thus we can store whether this data added was valid or not
+        type_diagnostic["valid"] = not invalid
+    
+    def add_run_data(self, doc) -> None:
+        """
+        Given a run doc, performs the specified diagnostic checks,
+        stores the diagnostic data, and filters down the data to a
+        desired subset and format. Filtered data stored in self.data
+        doc: a run type document/data
+        """
+        run_diagnostic = self.diagnostics["run"]
 
-        run_index = doc["_index"]
+        # should be checking existence
+        run = doc["_source"] # TODO: Factor out into RunCheck1 
+        run_id = run["@metadata"]["md5"] # TODO: Factor out into RunCheck1
+
+        self.data_check(doc, "run")
+
+        run_index = doc["_index"] # TODO: Factor out into RunCheck1
 
         # TODO: Figure out what exactly this sosreport section is doing,
         #       cuz I still don't know
@@ -51,59 +91,76 @@ class PbenchCombinedData:
                     # "inet6": [nic["ipaddr"] for nic in sosreport["inet6"]],
                 }
 
+        # TODO: This currently picks specific (possibly arbitrary) aspects
+        #       of the initial run data to keep. SHould Factor this choice
+        #       out to some function - Increase Generalizability/Extensibility
         self.data.update({
             "run_id": run_id,
             "run_index": run_index,
             "controller_dir": run["@metadata"]["controller_dir"],
             "sosreports": sosreports,
+            # diagnostic data added here
             "diagnostics": self.diagnostics
         })
-        # print("post-processing: \n")
-        # print(self.data)
-
-    # def filter_run_data(self, new_name_to_path_dict):
-    #     for property in new_name_to_path_dict:
-    #         path_list = new_name_to_path_dict[property].split("/")
-    #         value = 0
-    #         self.data.update(property, value)
     
-    def add_result_data(self, doc, result_diagnostic):
+    def add_result_data(self, doc, result_diagnostic : dict) -> None:
+        """
+        Given a result doc, and its diagnostic data, updates the 
+        internal store of the result diagnostic data, filters down
+        and reformats result data and adds it to the existing run
+        data in self.data
+        doc: result type document/data
+        result_diagnostic: dictionary from result diagnostic to value
 
-        self.data["diagnostics"]["result"] = result_diagnostic
-        if result_diagnostic["valid"] == True:
-            self.data.update(
-                [
-                    ("iteration.name", doc["_source"]["iteration"]["name"]),
-                    ("sample.name", doc["_source"]["sample"]["name"]),
-                    ("run.name", doc["_source"]["run"]["name"]),
-                    ("benchmark.bs", doc["_source"]["benchmark"]["bs"]),
-                    ("benchmark.direct", doc["_source"]["benchmark"]["direct"]),
-                    ("benchmark.ioengine",doc["_source"]["benchmark"]["ioengine"]),
-                    ("benchmark.max_stddevpct", doc["_source"]["benchmark"]["max_stddevpct"]),
-                    ("benchmark.primary_metric", doc["_source"]["benchmark"]["primary_metric"]),
-                    ("benchmark.rw", self.sentence_setify(doc["_source"]["benchmark"]["rw"])),
-                    ("sample.client_hostname", doc["_source"]["sample"]["client_hostname"]),
-                    ("sample.measurement_type", doc["_source"]["sample"]["measurement_type"]),
-                    ("sample.measurement_title", doc["_source"]["sample"]["measurement_title"]),
-                    ("sample.measurement_idx", doc["_source"]["sample"]["measurement_idx"]),
-                    ("sample.mean", doc["_source"]["sample"]["mean"]),
-                    ("sample.stddev", doc["_source"]["sample"]["stddev"]),
-                    ("sample.stddevpct", doc["_source"]["sample"]["stddevpct"])
-                ]
-            )
-        
-            # optional workload parameters accounting for defaults if not found
-            benchmark = doc["_source"]["benchmark"]
-            self.data["benchmark.filename"] = self.sentence_setify(
-                benchmark.get("filename", "/tmp/fio")
-            )
-            self.data["benchmark.iodepth"] = benchmark.get("iodepth", "32")
-            self.data["benchmark.size"] = self.sentence_setify(benchmark.get("size", "4096M"))
-            self.data["benchmark.numjobs"] = self.sentence_setify(benchmark.get("numjobs", "1"))
-            self.data["benchmark.ramp_time"] = benchmark.get("ramp_time", "none")
-            self.data["benchmark.runtime"] = benchmark.get("runtime", "none")
-            self.data["benchmark.sync"] = benchmark.get("sync", "none")
-            self.data["benchmark.time_based"] = benchmark.get("time_based", "none")
+        NOTE: result diagnostic checks need to be performed ahead of
+              time in the PbenchCombinedDataCollection Object. This is
+              because one check accounts for the case that a result data
+              has no associated run. So we need to check that there is a
+              valid run data associated before finding that data's
+              PbenchCombinedData Object and adding the result to it. We
+              also do this because even if record isn't valid and can't be
+              added we still need to track the diagnostic info.
+        """
+        # sets result diagnostic data internally
+        self.diagnostics["result"] = result_diagnostic
+        # since this function will only be called on valid docs
+        # because of a check in PbenchCombinedDataCollection we can just
+        # udpate self.data directly
+
+        # required data
+        self.data.update(
+            [
+                ("iteration.name", doc["_source"]["iteration"]["name"]),
+                ("sample.name", doc["_source"]["sample"]["name"]),
+                ("run.name", doc["_source"]["run"]["name"]),
+                ("benchmark.bs", doc["_source"]["benchmark"]["bs"]),
+                ("benchmark.direct", doc["_source"]["benchmark"]["direct"]),
+                ("benchmark.ioengine",doc["_source"]["benchmark"]["ioengine"]),
+                ("benchmark.max_stddevpct", doc["_source"]["benchmark"]["max_stddevpct"]),
+                ("benchmark.primary_metric", doc["_source"]["benchmark"]["primary_metric"]),
+                ("benchmark.rw", self.sentence_setify(doc["_source"]["benchmark"]["rw"])),
+                ("sample.client_hostname", doc["_source"]["sample"]["client_hostname"]),
+                ("sample.measurement_type", doc["_source"]["sample"]["measurement_type"]),
+                ("sample.measurement_title", doc["_source"]["sample"]["measurement_title"]),
+                ("sample.measurement_idx", doc["_source"]["sample"]["measurement_idx"]),
+                ("sample.mean", doc["_source"]["sample"]["mean"]),
+                ("sample.stddev", doc["_source"]["sample"]["stddev"]),
+                ("sample.stddevpct", doc["_source"]["sample"]["stddevpct"])
+            ]
+        )
+    
+        # optional workload parameters accounting for defaults if not found
+        benchmark = doc["_source"]["benchmark"]
+        self.data["benchmark.filename"] = self.sentence_setify(
+            benchmark.get("filename", "/tmp/fio")
+        )
+        self.data["benchmark.iodepth"] = benchmark.get("iodepth", "32")
+        self.data["benchmark.size"] = self.sentence_setify(benchmark.get("size", "4096M"))
+        self.data["benchmark.numjobs"] = self.sentence_setify(benchmark.get("numjobs", "1"))
+        self.data["benchmark.ramp_time"] = benchmark.get("ramp_time", "none")
+        self.data["benchmark.runtime"] = benchmark.get("runtime", "none")
+        self.data["benchmark.sync"] = benchmark.get("sync", "none")
+        self.data["benchmark.time_based"] = benchmark.get("time_based", "none")
 
     def sentence_setify(self, sentence: str) -> str:
         """Splits input by ", " gets rid of duplicates and rejoins unique
@@ -111,19 +168,17 @@ class PbenchCombinedData:
         """
         return ", ".join(set([word.strip() for word in sentence.split(",")]))
     
-    def fio_screening_check(self, doc):
-        fio_extraction_diagnostic = self.diagnostics["fio_extraction"]
-        invalid = False
-        for check in self.diagnostic_checks["fio_extraction"]:
-            check.diagnostic(doc)
-            diagnostic_update, issue = check.get_vals()
-            fio_extraction_diagnostic.update(diagnostic_update)
-            invalid |= issue
-        
-        fio_extraction_diagnostic["valid"] = not invalid
-    
-    def extract_fio_result(self, incoming_url, session):
-        
+    def extract_fio_result(self, incoming_url : str, session : Session) -> Tuple[list, list]:
+        """
+        Given an incoming_url it generates the specific url based on the data stored and performs
+        diagnostic checks specified. If successful it attempts to get diskname and
+        hostname data from the response object from the request sent to the url.
+        incoming_url: pbench server url prefix to fetch unpacked data
+        session: A session to make request to url
+        returns: Tuple of list of disknames and list of hostnames
+        """
+        # TODO: Why is this the url required. Would this be different in any case?
+        #       Does this need to be more general?
         url = (
             incoming_url
             + self.data["controller_dir"]
@@ -137,13 +192,16 @@ class PbenchCombinedData:
             + "fio-result.txt"
         )
 
-        self.fio_screening_check(url)
+        # diagnostic checks of disk and host names (fio extraction)
+        self.data_check(url, "fio_extraction")
+
         if self.diagnostics["fio_extraction"]["valid"] != True:
-            # FIXME: are these results we still want?
+            # FIXME: are these results defaults we still want?
             disknames, hostnames = ([], [])
         else:
             response = session.get(url, allow_redirects=True)
             document = response.json()
+            # from disk_util and client_stats get diskname and clientname info
             try:
                 disk_util = document["disk_util"]
             except KeyError:
@@ -162,31 +220,41 @@ class PbenchCombinedData:
 
         return (disknames, hostnames)
     
-    def add_host_and_disk_names(self, diskhost_map, incoming_url, session):
+    def add_host_and_disk_names(self, diskhost_map : dict, incoming_url : str, session: Session) -> None:
+        """
+        Adds the disk and host names to the self.data dict.
+        incoming_url: pbench server url prefix to fetch unpacked data
+        session: A session to make request to url
+        diskhost_map: maps run id and iteration name to disk and host names
+        """
+        # combination of run_id and iteration.name used as key for diskhost_map
         key = f"{self.data['run_id']}/{self.data['iteration.name']}"
+        # if not in map finds it using extract_fio_result and adds it to dict
+        # (because disk and host names associated with a run_id
+        # and multiple results might point to one run_id I think so avoids
+        # repeat computation)
         if key not in diskhost_map:
             disknames, hostnames = self.extract_fio_result(incoming_url, session)
             diskhost_map[key] = (disknames, hostnames)
         disknames, hostnames = diskhost_map[key]
+        # updates self.data with disk and host names
         self.data.update(
             [
                 ("disknames", disknames),
                 ("hostnames", hostnames)
             ]
         )
-
-    def client_diagnostic_check(self, clientnames):
-        client_diagnostic = self.diagnostics["client_side"]
-        invalid = False
-        for check in self.diagnostic_checks["client_side"]:
-            check.diagnostic(clientnames)
-            diagnostic_update, issue = check.get_vals()
-            client_diagnostic.update(diagnostic_update)
-            invalid |= issue
-        
-        client_diagnostic["valid"] = not invalid
     
-    def extract_clients(self, es):
+    def extract_clients(self, es : Elasticsearch) -> list[str]:
+        """
+        Given that self.data already contains the run and
+        result data, this function finds and returns a list
+        of unique raw client names.
+        es: Elasticsearch object
+        returns: list of unique raw client names
+        """
+        # TODO: Need to determine how specific this part is and
+        #       whether it can be different or more general
         run_index = self.data["run_index"]
         parent_id = self.data["run_id"]
         iter_name = self.data["iteration.name"]
@@ -218,17 +286,26 @@ class PbenchCombinedData:
         # FIXME: if we have an empty list, do we still want to use those results?
         return list(set(client_names_raw))
 
-    def add_client_names(self, clientnames_map, es):
+    def add_client_names(self, clientnames_map : dict, es : Elasticsearch) -> None:
+        """
+        This adds the associated clientnames to self.data only if
+        it passes the checks specified
+        clientnames_map: map from run_id to list of client names
+        es: Elasticsearch object where data is stored
+        """
         key = self.data["run_id"]
+        # if we haven't seen this run_id before, extract client names
+        # and add it to map (because clients associated with a run_id
+        # and multiple results might point to one run_id I think so avoids
+        # repeat computation) 
         if key not in clientnames_map:
             client_names = self.extract_clients(es)
             clientnames_map[key] = client_names
         client_names = clientnames_map[key]
 
-        self.client_diagnostic_check(client_names)
+        self.data_check(client_names, "client_side")
         if self.data["diagnostics"]["client_side"]["valid"] == True:
             self.data["clientnames"] = client_names
-
 
 class PbenchCombinedDataCollection:
     def __init__(self, incoming_url, session, es):
@@ -611,4 +688,7 @@ class ClientNamesCheck(DiagnosticCheck):
         else:
             pass
             
-        
+# TODO: There should be a way to specify the data source and the
+#       fields/properties desired from that source, and the data
+#       sources are filtered down as desired. And it autogenerates
+#       the checks to perform. - Generability/Extensibility
