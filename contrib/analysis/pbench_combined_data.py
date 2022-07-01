@@ -258,7 +258,7 @@ class PbenchCombinedData:
             Tuple of list of disknames and list of hostnames
 
         """
-        
+
         # TODO: Why is this the url required. Would this be different in any case?
         #       Does this need to be more general?
         url = (
@@ -418,23 +418,64 @@ class PbenchCombinedData:
             self.data["clientnames"] = client_names
 
 class PbenchCombinedDataCollection:
+    """Wrapper object for for a collection of PbenchCombinedData Objects.
+
+    It has methods that keep track of statistics for all diagnostic
+    checks used over all the data added to the collection. Stores
+    dictionary of all valid run, result data and a separate 
+    dictionary of all invalid data and associated diagnostic info.
+
+    Attributes
+    ----------
+    run_id_to_data_valid : dict
+        Map from valid run id to a PbenchCombinedData Object
+    invalid : dict
+        Map from type of data (ie run, result, etc) to 
+        a dict of id to dict containing the 
+        invalid data and its diagnostics
+    results_seen : dict
+        Map from result_id to True if encountered
+    trackers : dict
+        Map from data_type (ie run, result, etc) to
+        a dictionary of dianostic properties to number
+        of occurences
+    diagnostic_checks : dict
+        Map from data_type (ie run, result, etc) to a
+        list of concrete instances of DiagnosticCheck
+        Objects specifying checks to perform for each type
+    es : Elasticsearch
+        Elasticsearch object where data is stored (used for clientname extraction)
+    incoming_url : str
+        pbench server url prefix to fetch unpacked data (used for fio extraction)
+    session : Session
+        A session to make request to url (used for fio extraction)
+    result_temp_id : int
+        temporary id value for result if no id, so can be added
+        to invalid dictionary
+    diskhost_map : dict
+            maps run id and iteration name to tuple of disk and host names
+    clientnames_map: dict
+            map from run_id to list of client names
+
     """
-    This serves as a wrapper class for a collection of PbenchCombinedData
-    Objects. It has methods that keep track of statistics for all diagnostic
-    checks used over all the data added to the collection.
-    """
+
     def __init__(self, incoming_url : str, session : Session, es : Elasticsearch) -> None:
+        """This initializes all the class attributes specified above
+
+        Creates all other attributes, but stores the parameters
+        passed in as the respective attribute value
+
+        Parameters
+        ----------
+        incoming_url : str
+            pbench server url prefix to fetch unpacked data (used for fio extraction)
+        session : Session
+            A session to make request to url (used for fio extraction)
+        es : Elasticsearch
+            Elasticsearch object where data is stored (used for clientname extraction)
+
         """
-        Initialization function.
-        Creates a map - self.run_id_to_data_valid - from valid run_id to a PbenchCombinedData
-        Creates a map - self.invalid - from data_type (ie run, result) to invalid_data_id to invalid data as a dict
-        Creates a map - self.results_seen - from result_id to True if encountered
-        Stores inputs passed in, in instance variables.
-        Creates a map - self.trackers - 
-        incoming_url: pbench server url prefix to fetch unpacked data (used for fio extraction)
-        session: A session to make request to url (used for fio extraction)
-        es: Elasticsearch object where data is stored (used for clientname extraction)
-        """
+
         self.run_id_to_data_valid = dict()
         self.invalid = {"run": dict(), "result": dict(), "client_side": dict()}
         # not sure if this is really required but will follow current
@@ -456,7 +497,16 @@ class PbenchCombinedDataCollection:
         self.diskhost_map = dict()
         self.clientnames_map = dict()
     
-    def __str__(self):
+    def __str__(self) -> str:
+        """Specifies how to print object
+        
+        Returns
+        -------
+        print_val : str
+            string (combination of multiple attributes) to print
+
+        """
+
         return str("---------------\n" +
             # "Valid Data: \n" +
             # str(self.run_id_to_data_valid) + "\n" +
@@ -468,7 +518,21 @@ class PbenchCombinedDataCollection:
             str(self.trackers) +
             "---------------\n")
     
-    def trackers_initialization(self):
+    def trackers_initialization(self) -> None:
+        """Initializes all diagnostic tracker values to 0.
+        
+        For each type of diagnostic, finds the specific
+        properties for each diagnostic check adds them to
+        the trackers and sets the value to 0. Also add a
+        'valid' and 'total_records' property to each type
+        with values.
+
+        Returns
+        -------
+        None
+
+        """
+
         for type in self.diagnostic_checks:
             self.trackers[type]["valid"] = 0
             self.trackers[type]["total_records"] = 0
@@ -476,34 +540,99 @@ class PbenchCombinedDataCollection:
                 for name in check.diagnostic_names:
                     self.trackers[type].update({name: 0})
 
-    def update_diagnostic_trackers(self, diagnsotic_data : dict, type : str):
-        # allowed types: "run", "result"
-        # type_diagnostic = record.data["diagnostics"][type]
+    def update_diagnostic_trackers(self, diagnsotic_data : dict, type : str) -> None:
+        """Given the diagnostic info of a certain type of data, updates trackers appropriately.
+
+        Assumes that the diagnostic info has boolean values, where the keys
+        are such that a True value corresponds to an error that needs to be tracked
+        and updated in the trackers dict. So based on this tracker values are updated.
+
+        TODO: Need to make it more general so that diagnostic values can be non boolean
+        and have way of appropriately updating trackers
+
+        Parameters
+        ----------
+        diagnostic_data: dict
+            map of diagnostic properties to values (boolean as of now)
+        type : str
+            type of diagnostic_data given (ie 'run', 'result', 'fio_extraction,
+            'client_side')
+
+        Returns
+        -------
+        None
+        
+        """
+
+        # allowed types: "run", "result", "fio_extraction", "client_side"
         # update trackers based on run_diagnostic data collected
         self.trackers[type]["total_records"] += 1
         for diagnostic in diagnsotic_data:
             if diagnsotic_data[diagnostic] == True:
                 self.trackers[type][diagnostic] += 1
                 
-        
-    def print_stats(self):
-        stats = "Pbench runs Stats: \n"
-        for tracker in self.trackers["run"]:
-            stats += f"{tracker}: {self.trackers['run'][tracker] : n} \n"
-
-        print(stats, flush=True)
     
-    def add_run(self, doc):
+    def add_run(self, doc) -> None:
+        """Adds run doc to a PbenchCombinedData object and adds it to either valid or invalid dict.
+
+        Given a run doc, creates a new PbenchCombinedData Object with the diagnostic
+        checks we care about, and adds run data to it. Updates the trackers
+        based on diagnostic info, checks if valid and adds it to valid dict with run_id
+        as the key or invalid under run type.
+
+        Parameters
+        ----------
+        doc: json
+            json run data from run doc from run index
+
+        Returns
+        -------
+        None
+        
+        """
+
         new_run = PbenchCombinedData(self.diagnostic_checks)
         new_run.add_run_data(doc)
         self.update_diagnostic_trackers(new_run.data["diagnostics"]["run"], "run")
         run_id = new_run.data["run_id"]
+        # if valid adds run to valid dict else invalid dict
         if new_run.data["diagnostics"]["run"]["valid"] == True:
             self.run_id_to_data_valid[run_id] = new_run
         else:
             self.invalid["run"][run_id] = new_run
 
-    def result_screening_check(self, doc):
+    def result_screening_check(self, doc) -> dict:
+        """Performs result checks on the doc and returns a dict of the checks and values.
+
+        This performs all the checks of the result type
+        on the doc passed in and creates a dictionary of the check
+        properties and the values which is then returned.
+
+        NOTE: This needs to be performed here, because we need to add
+              only valid result data to a PbenchCombinedData Object
+              with the associated run. But we still need to update
+              the trackers even if result is invalid. So we can't do the
+              check from the PbenchCombinedData Object because it requires
+              we already know the run exists and which one it is ahead of
+              time which we don't since this is one of the checks we need
+              to perform.
+            
+        TODO: This is redundant code because it is a direct copy of the
+              data_check method from the PbenchCombinedData class, so 
+              should figure out a better way to do this.
+
+        Parameters
+        ----------
+        doc 
+            json result data from result doc from result index
+
+        Returns
+        -------
+        result_diagnostic : dict
+            Map from result check property to value (boolean as of now)
+
+        """
+
         result_diagnostic = dict()
         invalid = False
 
@@ -518,6 +647,34 @@ class PbenchCombinedDataCollection:
         return result_diagnostic
     
     def add_result(self, doc):
+        """Adds result doc to a PbenchCombinedData object if valid.
+
+        Given a result doc, first calls the screening check to determine
+        the diagnostic info, and update the result trackers.
+        
+        If valid, finds the associated run using run_id
+        and adds result data to that PbenchCombinedData Object. It then adds
+        host and disk names to the same object, as well as client names, and
+        updates all the trackers accordingly. We do this here, because once
+        the result data is added, the PbenchCombinedData object stores all the
+        information required to add these new values.
+        
+        If invalid, we add the diagnostic data collected to the result doc.
+        If there was a result id we add it to invalid dict's result dict with
+        the id as the key, and if it was missing we create a temp id and use
+        that as the key.
+
+        Parameters
+        ----------
+        doc: json
+            json result data from result doc from result index
+
+        Returns
+        -------
+        None
+        
+        """
+
         result_diagnostic_return = self.result_screening_check(doc)
         self.update_diagnostic_trackers(result_diagnostic_return, "result")
         if result_diagnostic_return["valid"] == True:
@@ -528,6 +685,13 @@ class PbenchCombinedDataCollection:
             self.update_diagnostic_trackers(associated_run.data["diagnostics"]["fio_extraction"], "fio_extraction")
             associated_run.add_client_names(self.clientnames_map, self.es)
             self.update_diagnostic_trackers(associated_run.data["diagnostics"]["client_side"], "client_side")
+            # NOTE: though host and disk names may be marked invalid, a valid output
+            #       is always given in those cases, so we will effectively always have
+            #       valid hostdisk names. However client_names marked as invalid will 
+            #       not be added to valid data. The code below then moves the associated run
+            #       to the invalid dict updating trackers, but since the initial code
+            #       treated this as optional and left valid runs valid we do the same.
+
             # if associated_run.data["diagnostics"]["client_side"]["valid"] == False:
                 # associated_run = self.run_id_to_data_valid.pop(associated_run_id)
                 # self.invalid["client_side"][associated_run_id] = associated_run
@@ -540,8 +704,8 @@ class PbenchCombinedDataCollection:
                 self.invalid["result"]["missing_so_temo_id_" + str(self.result_temp_id)] = doc
                 self.result_temp_id += 1
     
-    def get_runs(self):
-        return self.run_id_to_data_valid
+    #TODO: Maybe add sosreports from here. But will determine this once moved on
+    #      from merge_sos_and_perf_parallel.py file
 
  
 class DiagnosticCheck(ABC):
