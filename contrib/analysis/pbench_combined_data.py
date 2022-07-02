@@ -3,7 +3,7 @@ from collections import defaultdict
 import os
 
 from requests import Session
-from typing import Tuple
+from typing import Tuple, Type
 from elasticsearch1 import Elasticsearch
 from elasticsearch1.helpers import scan
 
@@ -757,7 +757,7 @@ class PbenchCombinedDataCollection:
     # TODO: Maybe add sosreports from here. But will determine this once moved on
     #      from merge_sos_and_perf_parallel.py file
 
-    def combine_data(self, other : PbenchCombinedDataCollection):
+    def combine_data(self, other):
         self.run_id_to_data_valid.update(other.run_id_to_data_valid)
         self.invalid.update(other.invalid)
         self.results_seen.update(other.results_seen)
