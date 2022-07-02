@@ -122,7 +122,7 @@ def main(args):
     # We create the multiprocessing pool first to avoid forking a sub-process
     # with lots of memory allocated.
     ncpus = multiprocessing.cpu_count() - 1 if args.cpu_n == 0 else args.cpu_n
-    pool = multiprocessing.Pool(ncpus) if ncpus != 1 else None
+    # pool = multiprocessing.Pool(ncpus) if ncpus != 1 else None
 
     es = Elasticsearch(
         [f"{args.es_host}:{args.es_port}"], timeout=60
@@ -136,13 +136,15 @@ def main(args):
     scan_start = time.time()
     now = datetime.utcfromtimestamp(scan_start)
     
-    pool.starmap(merge_run_result_index, [(es, month, args.record_limit, pbench_data) for month in _month_gen(now)])
+    # TODO: This doesn't work because modifying class attributes. Need to figure out work around
+    #       and see if ideally we could do this processing on the cloud somehow.
+    # pool.starmap(merge_run_result_index, [(es, month, args.record_limit, pbench_data) for month in _month_gen(now)])
 
-    # for month in _month_gen(now):
-    #     merge_run_result_index(es, month, args.record_limit, pbench_data)
-    #     if args.record_limit != -1:
-    #         if len(pbench_data.run_id_to_data_valid) >= args.record_limit:
-    #             break
+    for month in _month_gen(now):
+        merge_run_result_index(es, month, args.record_limit, pbench_data)
+        if args.record_limit != -1:
+            if len(pbench_data.run_id_to_data_valid) >= args.record_limit:
+                break
     
     # NOTE: Not writing sosreports and results to files. Will work on this step
     #       of sosreport processing, etc next.
