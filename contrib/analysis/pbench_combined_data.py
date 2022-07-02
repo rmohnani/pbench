@@ -748,7 +748,11 @@ class DiagnosticCheck(ABC):
         """Function specifying how to perform diagnostic to be implemented by extending classes.
 
         Resets the value of attributes. This so that the same check
-        object can be used for multiple docs.
+        object can be used for multiple docs. Performs a check for each
+        diagnostic listed in diagnostic_names and stores the evaluation
+        either True or False as of now in the diagnostic_return dict, and
+        updates the issues value if any True encountered.
+
         NOTE: Not sure if this is the best way to do it. But don't
               want to create a new check object everytime as I
               assume that takes more memory and time? Not sure.
@@ -805,7 +809,6 @@ class DiagnosticCheck(ABC):
     
 
 class ControllerDirRunCheck(DiagnosticCheck):
-
     _diagnostic_names = ["missing_ctrl_dir"]
 
     @property
@@ -850,6 +853,17 @@ class SosreportRunCheck(DiagnosticCheck):
 class SeenResultCheck(DiagnosticCheck):
 
     def __init__(self, results_seen : dict):
+        """Initialization function
+        
+        Takes in results_seen because it is needed to
+        perform one of the checks. Also stores it in an attribute.
+
+        Parameters
+        ----------
+        results_seen : dict
+            Map from result_id seen to True
+        
+        """
         self.results_seen = results_seen
 
     _diagnostic_names = ["missing._id", "duplicate_result_id"]
@@ -963,8 +977,19 @@ class BaseResultCheck(DiagnosticCheck):
 
 class RunNotInDataResultCheck(DiagnosticCheck):
 
-    def __init__(self, pbench_combined_data : PbenchCombinedDataCollection):
-        self.pbench_combined_data = pbench_combined_data
+    def __init__(self, run_id_to_data_dict : dict):
+        """Initialization function
+        
+        Takes in run_id_to_data_dict because it is needed to
+        perform one of the checks. Also stores it in an attribute.
+
+        Parameters
+        ----------
+        run_id_to_data : dict
+            Map from run_id seen to PbenchCombinedData Object
+        
+        """
+        self.run_id_to_data_dict = run_id_to_data_dict
 
     _diagnostic_names = ["run_not_in_data"]
 
@@ -974,7 +999,7 @@ class RunNotInDataResultCheck(DiagnosticCheck):
 
     def diagnostic(self, doc):
         super().diagnostic(doc)
-        if doc["_source"]["run"]["id"] not in self.pbench_combined_data:
+        if doc["_source"]["run"]["id"] not in self.run_id_to_data_dict:
             self.diagnostic_return["run_not_in_data"] = True
             self.issues = True
 
@@ -996,8 +1021,20 @@ class ClientHostAggregateResultCheck(DiagnosticCheck):
 class FioExtractionCheck(DiagnosticCheck):
 
     def __init__(self, session):
+        """Initialization function
+        
+        Takes in session because it is needed to
+        perform one of the checks. Also stores it in an attribute.
+
+        Parameters
+        ----------
+        session : Session
+            A session to make request to url
+        
+        """
         self.session = session
         # FIXME: are these results we still want in failure cases?
+        # default values in case of error
         self.disk_host_names = ([],[])
 
     _diagnostic_names = ["session_response_unsuccessful",
@@ -1008,7 +1045,7 @@ class FioExtractionCheck(DiagnosticCheck):
         return self._diagnostic_names
 
     def diagnostic(self, doc):
-        #doc acting as url
+        # here doc is the url to make a request to
         super().diagnostic(doc)
         
         # check if the page is accessible
@@ -1033,7 +1070,7 @@ class ClientNamesCheck(DiagnosticCheck):
         return self._diagnostic_names
 
     def diagnostic(self, doc):
-        #doc acting as clientnames
+        # here doc is the list of clientnames
         super().diagnostic(doc)
         
         # Ignore result if 0 or more than 1 client names
