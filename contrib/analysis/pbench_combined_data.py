@@ -128,7 +128,7 @@ class PbenchCombinedData:
         # NOTE: Only if run data valid (2 sosreports with non-different hosts)
         #       are the sosreports undergoing processing, else empty dict
 
-        if run_diagnostic["valid"] == True:
+        if run_diagnostic["valid"] is True:
             # FIXME: Should I remove the forloop here after the above change?
             for sosreport in run["sosreports"]:
                 sosreports[os.path.split(sosreport["name"])[1]] = {
@@ -304,7 +304,7 @@ class PbenchCombinedData:
         # diagnostic checks of disk and host names (fio extraction)
         self.data_check(url, "fio_extraction")
 
-        if self.diagnostics["fio_extraction"]["valid"] != True:
+        if self.diagnostics["fio_extraction"]["valid"] is not True:
             # FIXME: are these results defaults we still want?
             disknames, hostnames = ([], [])
         else:
@@ -444,7 +444,7 @@ class PbenchCombinedData:
         client_names = clientnames_map[key]
 
         self.data_check(client_names, "client_side")
-        if self.data["diagnostics"]["client_side"]["valid"] == True:
+        if self.data["diagnostics"]["client_side"]["valid"] is True:
             self.data["clientnames"] = client_names
 
 
@@ -550,14 +550,13 @@ class PbenchCombinedDataCollection:
 
         return str(
             "---------------\n"
-            +
             # "Valid Data: \n" +
             # str(self.run_id_to_data_valid) + "\n" +
             # "Results Seen: \n" +
             # str(self.results_seen) + "\n" +
             # "Results Seen: " + str(len(self.results_seen)) + "\n" +
             # "Diagnostic Checks Used: \n" + str(self.diagnostic_checks) + "\n" +
-            "Trackers: \n"
+            + "Trackers: \n"
             + str(self.trackers)
             + "---------------\n"
         )
@@ -612,7 +611,7 @@ class PbenchCombinedDataCollection:
         # update trackers based on run_diagnostic data collected
         self.trackers[type]["total_records"] += 1
         for diagnostic in diagnsotic_data:
-            if diagnsotic_data[diagnostic] == True:
+            if diagnsotic_data[diagnostic] is True:
                 self.trackers[type][diagnostic] += 1
 
     def add_run(self, doc) -> None:
@@ -639,7 +638,7 @@ class PbenchCombinedDataCollection:
         self.update_diagnostic_trackers(new_run.data["diagnostics"]["run"], "run")
         run_id = new_run.data["run_id"]
         # if valid adds run to valid dict else invalid dict
-        if new_run.data["diagnostics"]["run"]["valid"] == True:
+        if new_run.data["diagnostics"]["run"]["valid"] is True:
             self.run_id_to_data_valid[run_id] = new_run
         else:
             self.invalid["run"][run_id] = new_run
@@ -720,7 +719,7 @@ class PbenchCombinedDataCollection:
 
         result_diagnostic_return = self.result_screening_check(doc)
         self.update_diagnostic_trackers(result_diagnostic_return, "result")
-        if result_diagnostic_return["valid"] == True:
+        if result_diagnostic_return["valid"] is True:
             associated_run_id = doc["_source"]["run"]["id"]
             associated_run = self.run_id_to_data_valid[associated_run_id]
             associated_run.add_result_data(doc, result_diagnostic_return)
@@ -747,7 +746,7 @@ class PbenchCombinedDataCollection:
             # self.trackers["result"]["valid"] -= 1
         else:
             doc.update({"diagnostics": {"result": result_diagnostic_return}})
-            if result_diagnostic_return["missing._id"] == False:
+            if result_diagnostic_return["missing._id"] is False:
                 self.invalid["result"][result_diagnostic_return["missing._id"]] = doc
             else:
                 self.invalid["result"][

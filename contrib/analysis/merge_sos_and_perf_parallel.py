@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 import argparse
-import multiprocessing
+# import multiprocessing
 import requests
 import time
 
@@ -128,7 +128,7 @@ def main(args):
 
     # We create the multiprocessing pool first to avoid forking a sub-process
     # with lots of memory allocated.
-    ncpus = multiprocessing.cpu_count() - 1 if args.cpu_n == 0 else args.cpu_n
+    # ncpus = multiprocessing.cpu_count() - 1 if args.cpu_n == 0 else args.cpu_n
     # pool = multiprocessing.Pool(ncpus) if ncpus != 1 else None
 
     es = Elasticsearch(
