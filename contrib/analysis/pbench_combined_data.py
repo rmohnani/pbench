@@ -757,7 +757,7 @@ class PbenchCombinedDataCollection:
     # TODO: Maybe add sosreports from here. But will determine this once moved on
     #      from merge_sos_and_perf_parallel.py file
 
-    def merge_dict(dict1, dict2):
+    def merge_dict(self, dict1, dict2):
         return dict(Counter(dict1) + Counter(dict2))
 
     def combine_data(self, other):
