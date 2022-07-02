@@ -7,10 +7,11 @@ from typing import Tuple
 from elasticsearch1 import Elasticsearch
 from elasticsearch1.helpers import scan
 
+
 class PbenchCombinedData:
     """Container object for all pbench data associated with each other.
 
-    This Class serves as a container class for 1 'run' record and all 
+    This Class serves as a container class for 1 'run' record and all
     associated result data, disk and host names, client names, sosreports,
     and diagnostic information regarding each of these data.
 
@@ -30,7 +31,7 @@ class PbenchCombinedData:
 
     """
 
-    def __init__(self, diagnostic_checks : dict()) -> None:
+    def __init__(self, diagnostic_checks: dict()) -> None:
         """This initializes all the class attributes specified above
 
         Creates data and diagnostics attributes, but stores the param
@@ -47,12 +48,15 @@ class PbenchCombinedData:
         # FIXME: Keeping data and diagnostics separate for now, because might
         # want to increase generalizability for diagnostic specifications
         self.data = dict()
-        self.diagnostics = {"run" : dict(), "result": dict(), 
-                            "fio_extraction": dict(),
-                            "client_side": dict()}
+        self.diagnostics = {
+            "run": dict(),
+            "result": dict(),
+            "fio_extraction": dict(),
+            "client_side": dict(),
+        }
         self.diagnostic_checks = diagnostic_checks
 
-    def data_check(self, doc, type : str) -> None:
+    def data_check(self, doc, type: str) -> None:
         """Performs checks of the specified type on doc and updates diagnostics attribute
 
         This performs all the checks of the diagnostic type passed in
@@ -61,7 +65,7 @@ class PbenchCombinedData:
 
         Parameters
         ----------
-        doc 
+        doc
             The data source passed in required for the check
             For run type doc is json data
             For result type doc is json data
@@ -89,19 +93,19 @@ class PbenchCombinedData:
 
         # thus we can store whether this data added was valid or not
         type_diagnostic["valid"] = not invalid
-    
+
     def add_run_data(self, doc) -> None:
-        """ Given a run doc, processes it and adds it to self.data
+        """Given a run doc, processes it and adds it to self.data
 
         Given a run doc, performs the specified run type diagnostic checks,
         stores the diagnostic data, and filters down the data to a
         desired subset and format. Filtered data stored in self.data
-        
+
         Parameters
         ----------
         doc : json
             json run data from a run doc in a run type index in elasticsearch
- 
+
         Returns
         -------
         None
@@ -110,12 +114,12 @@ class PbenchCombinedData:
         run_diagnostic = self.diagnostics["run"]
 
         # should be checking existence
-        run = doc["_source"] # TODO: Factor out into RunCheck1 
-        run_id = run["@metadata"]["md5"] # TODO: Factor out into RunCheck1
+        run = doc["_source"]  # TODO: Factor out into RunCheck1
+        run_id = run["@metadata"]["md5"]  # TODO: Factor out into RunCheck1
 
         self.data_check(doc, "run")
 
-        run_index = doc["_index"] # TODO: Factor out into RunCheck1
+        run_index = doc["_index"]  # TODO: Factor out into RunCheck1
 
         # TODO: Figure out what exactly this sosreport section is doing,
         #       cuz I still don't know
@@ -139,23 +143,25 @@ class PbenchCombinedData:
         # TODO: This currently picks specific (possibly arbitrary) aspects
         #       of the initial run data to keep. SHould Factor this choice
         #       out to some function - Increase Generalizability/Extensibility
-        self.data.update({
-            "run_id": run_id,
-            "run_index": run_index,
-            "controller_dir": run["@metadata"]["controller_dir"],
-            "sosreports": sosreports,
-            # diagnostic data added here
-            "diagnostics": self.diagnostics
-        })
-    
-    def add_result_data(self, doc, result_diagnostic : dict) -> None:
-        """ Given a result doc, processes it and adds it to self.data
+        self.data.update(
+            {
+                "run_id": run_id,
+                "run_index": run_index,
+                "controller_dir": run["@metadata"]["controller_dir"],
+                "sosreports": sosreports,
+                # diagnostic data added here
+                "diagnostics": self.diagnostics,
+            }
+        )
+
+    def add_result_data(self, doc, result_diagnostic: dict) -> None:
+        """Given a result doc, processes it and adds it to self.data
 
         Given a result doc, performs the specified result type diagnostic checks,
         stores the diagnostic data, and filters down the data to a
         desired subset and format. Filtered data added to exiting run data in
         self.data
-        
+
         Parameters
         ----------
         doc : json
@@ -171,11 +177,11 @@ class PbenchCombinedData:
               PbenchCombinedData Object and adding the result to it. We
               also do this because even if record isn't valid and can't be
               added we still need to track the diagnostic info.
- 
+
         Returns
         -------
         None
-        
+
         """
 
         # sets result diagnostic data internally
@@ -192,28 +198,47 @@ class PbenchCombinedData:
                 ("run.name", doc["_source"]["run"]["name"]),
                 ("benchmark.bs", doc["_source"]["benchmark"]["bs"]),
                 ("benchmark.direct", doc["_source"]["benchmark"]["direct"]),
-                ("benchmark.ioengine",doc["_source"]["benchmark"]["ioengine"]),
-                ("benchmark.max_stddevpct", doc["_source"]["benchmark"]["max_stddevpct"]),
-                ("benchmark.primary_metric", doc["_source"]["benchmark"]["primary_metric"]),
-                ("benchmark.rw", self.sentence_setify(doc["_source"]["benchmark"]["rw"])),
+                ("benchmark.ioengine", doc["_source"]["benchmark"]["ioengine"]),
+                (
+                    "benchmark.max_stddevpct",
+                    doc["_source"]["benchmark"]["max_stddevpct"],
+                ),
+                (
+                    "benchmark.primary_metric",
+                    doc["_source"]["benchmark"]["primary_metric"],
+                ),
+                (
+                    "benchmark.rw",
+                    self.sentence_setify(doc["_source"]["benchmark"]["rw"]),
+                ),
                 ("sample.client_hostname", doc["_source"]["sample"]["client_hostname"]),
-                ("sample.measurement_type", doc["_source"]["sample"]["measurement_type"]),
-                ("sample.measurement_title", doc["_source"]["sample"]["measurement_title"]),
+                (
+                    "sample.measurement_type",
+                    doc["_source"]["sample"]["measurement_type"],
+                ),
+                (
+                    "sample.measurement_title",
+                    doc["_source"]["sample"]["measurement_title"],
+                ),
                 ("sample.measurement_idx", doc["_source"]["sample"]["measurement_idx"]),
                 ("sample.mean", doc["_source"]["sample"]["mean"]),
                 ("sample.stddev", doc["_source"]["sample"]["stddev"]),
-                ("sample.stddevpct", doc["_source"]["sample"]["stddevpct"])
+                ("sample.stddevpct", doc["_source"]["sample"]["stddevpct"]),
             ]
         )
-    
+
         # optional workload parameters accounting for defaults if not found
         benchmark = doc["_source"]["benchmark"]
         self.data["benchmark.filename"] = self.sentence_setify(
             benchmark.get("filename", "/tmp/fio")
         )
         self.data["benchmark.iodepth"] = benchmark.get("iodepth", "32")
-        self.data["benchmark.size"] = self.sentence_setify(benchmark.get("size", "4096M"))
-        self.data["benchmark.numjobs"] = self.sentence_setify(benchmark.get("numjobs", "1"))
+        self.data["benchmark.size"] = self.sentence_setify(
+            benchmark.get("size", "4096M")
+        )
+        self.data["benchmark.numjobs"] = self.sentence_setify(
+            benchmark.get("numjobs", "1")
+        )
         self.data["benchmark.ramp_time"] = benchmark.get("ramp_time", "none")
         self.data["benchmark.runtime"] = benchmark.get("runtime", "none")
         self.data["benchmark.sync"] = benchmark.get("sync", "none")
@@ -221,15 +246,15 @@ class PbenchCombinedData:
 
     def sentence_setify(self, sentence: str) -> str:
         """Effectively removes duplicates in input string.
-        
+
         Splits input by ", " gets rid of duplicates and rejoins unique
         items into original format.
 
         Parameters
         ----------
         sentence : str
-            input string to remove duplicates from 
- 
+            input string to remove duplicates from
+
         Returns
         -------
         None
@@ -237,8 +262,10 @@ class PbenchCombinedData:
         """
 
         return ", ".join(set([word.strip() for word in sentence.split(",")]))
-    
-    def extract_fio_result(self, incoming_url : str, session : Session) -> Tuple[list, list]:
+
+    def extract_fio_result(
+        self, incoming_url: str, session: Session
+    ) -> Tuple[list, list]:
         """This returns disknames and hostnames associated with data stored.
 
         Given an incoming_url it generates the specific url based on the data stored and performs
@@ -298,12 +325,20 @@ class PbenchCombinedData:
                 hostnames = []
             else:
                 hostnames = list(
-                    set([host["hostname"] for host in client_stats if "hostname" in host])
+                    set(
+                        [
+                            host["hostname"]
+                            for host in client_stats
+                            if "hostname" in host
+                        ]
+                    )
                 )
 
         return (disknames, hostnames)
-    
-    def add_host_and_disk_names(self, diskhost_map : dict, incoming_url : str, session: Session) -> None:
+
+    def add_host_and_disk_names(
+        self, diskhost_map: dict, incoming_url: str, session: Session
+    ) -> None:
         """Adds the disk and host names to the self.data dict.
 
         Parameters
@@ -332,16 +367,11 @@ class PbenchCombinedData:
             diskhost_map[key] = (disknames, hostnames)
         disknames, hostnames = diskhost_map[key]
         # updates self.data with disk and host names
-        self.data.update(
-            [
-                ("disknames", disknames),
-                ("hostnames", hostnames)
-            ]
-        )
-    
-    def extract_clients(self, es : Elasticsearch) -> list[str]:
+        self.data.update([("disknames", disknames), ("hostnames", hostnames)])
+
+    def extract_clients(self, es: Elasticsearch) -> list[str]:
         """Given run and result data already stored returns a list of unique raw client names
-       
+
         Parameters
         ----------
         es : Elasticsearch
@@ -387,9 +417,9 @@ class PbenchCombinedData:
         # FIXME: if we have an empty list, do we still want to use those results?
         return list(set(client_names_raw))
 
-    def add_client_names(self, clientnames_map : dict, es : Elasticsearch) -> None:
+    def add_client_names(self, clientnames_map: dict, es: Elasticsearch) -> None:
         """Adds clientnames to data stored if checks passed.
-        
+
         Parameters
         ----------
         clientnames_map: dict
@@ -400,14 +430,14 @@ class PbenchCombinedData:
         Returns
         -------
         None
-        
+
         """
 
         key = self.data["run_id"]
         # if we haven't seen this run_id before, extract client names
         # and add it to map (because clients associated with a run_id
         # and multiple results might point to one run_id I think so avoids
-        # repeat computation) 
+        # repeat computation)
         if key not in clientnames_map:
             client_names = self.extract_clients(es)
             clientnames_map[key] = client_names
@@ -417,12 +447,13 @@ class PbenchCombinedData:
         if self.data["diagnostics"]["client_side"]["valid"] == True:
             self.data["clientnames"] = client_names
 
+
 class PbenchCombinedDataCollection:
     """Wrapper object for for a collection of PbenchCombinedData Objects.
 
     It has methods that keep track of statistics for all diagnostic
     checks used over all the data added to the collection. Stores
-    dictionary of all valid run, result data and a separate 
+    dictionary of all valid run, result data and a separate
     dictionary of all invalid data and associated diagnostic info.
 
     Attributes
@@ -430,8 +461,8 @@ class PbenchCombinedDataCollection:
     run_id_to_data_valid : dict
         Map from valid run id to a PbenchCombinedData Object
     invalid : dict
-        Map from type of data (ie run, result, etc) to 
-        a dict of id to dict containing the 
+        Map from type of data (ie run, result, etc) to
+        a dict of id to dict containing the
         invalid data and its diagnostics
     results_seen : dict
         Map from result_id to True if encountered
@@ -459,7 +490,7 @@ class PbenchCombinedDataCollection:
 
     """
 
-    def __init__(self, incoming_url : str, session : Session, es : Elasticsearch) -> None:
+    def __init__(self, incoming_url: str, session: Session, es: Elasticsearch) -> None:
         """This initializes all the class attributes specified above
 
         Creates all other attributes, but stores the parameters
@@ -484,22 +515,32 @@ class PbenchCombinedDataCollection:
         self.es = es
         self.incoming_url = incoming_url
         self.session = session
-        self.trackers = {"run": dict(), "result": dict(), "fio_extraction": dict(), "client_side": dict()}
-        self.diagnostic_checks = {"run": [ControllerDirRunCheck(), SosreportRunCheck()],
-                                    # TODO: need to fix order of these result checks to match the original      
-                                    "result": [SeenResultCheck(self.results_seen), BaseResultCheck(),
-                                                RunNotInDataResultCheck(self.run_id_to_data_valid),
-                                                ClientHostAggregateResultCheck()],
-                                    "fio_extraction": [FioExtractionCheck(self.session)],
-                                    "client_side": [ClientNamesCheck()]}
+        self.trackers = {
+            "run": dict(),
+            "result": dict(),
+            "fio_extraction": dict(),
+            "client_side": dict(),
+        }
+        self.diagnostic_checks = {
+            "run": [ControllerDirRunCheck(), SosreportRunCheck()],
+            # TODO: need to fix order of these result checks to match the original
+            "result": [
+                SeenResultCheck(self.results_seen),
+                BaseResultCheck(),
+                RunNotInDataResultCheck(self.run_id_to_data_valid),
+                ClientHostAggregateResultCheck(),
+            ],
+            "fio_extraction": [FioExtractionCheck(self.session)],
+            "client_side": [ClientNamesCheck()],
+        }
         self.trackers_initialization()
         self.result_temp_id = 0
         self.diskhost_map = dict()
         self.clientnames_map = dict()
-    
+
     def __str__(self) -> str:
         """Specifies how to print object
-        
+
         Returns
         -------
         print_val : str
@@ -507,20 +548,23 @@ class PbenchCombinedDataCollection:
 
         """
 
-        return str("---------------\n" +
+        return str(
+            "---------------\n"
+            +
             # "Valid Data: \n" +
             # str(self.run_id_to_data_valid) + "\n" +
             # "Results Seen: \n" +
             # str(self.results_seen) + "\n" +
             # "Results Seen: " + str(len(self.results_seen)) + "\n" +
             # "Diagnostic Checks Used: \n" + str(self.diagnostic_checks) + "\n" +
-            "Trackers: \n" +
-            str(self.trackers) +
-            "---------------\n")
-    
+            "Trackers: \n"
+            + str(self.trackers)
+            + "---------------\n"
+        )
+
     def trackers_initialization(self) -> None:
         """Initializes all diagnostic tracker values to 0.
-        
+
         For each type of diagnostic, finds the specific
         properties for each diagnostic check adds them to
         the trackers and sets the value to 0. Also add a
@@ -540,7 +584,7 @@ class PbenchCombinedDataCollection:
                 for name in check.diagnostic_names:
                     self.trackers[type].update({name: 0})
 
-    def update_diagnostic_trackers(self, diagnsotic_data : dict, type : str) -> None:
+    def update_diagnostic_trackers(self, diagnsotic_data: dict, type: str) -> None:
         """Given the diagnostic info of a certain type of data, updates trackers appropriately.
 
         Assumes that the diagnostic info has boolean values, where the keys
@@ -561,7 +605,7 @@ class PbenchCombinedDataCollection:
         Returns
         -------
         None
-        
+
         """
 
         # allowed types: "run", "result", "fio_extraction", "client_side"
@@ -570,8 +614,7 @@ class PbenchCombinedDataCollection:
         for diagnostic in diagnsotic_data:
             if diagnsotic_data[diagnostic] == True:
                 self.trackers[type][diagnostic] += 1
-                
-    
+
     def add_run(self, doc) -> None:
         """Adds run doc to a PbenchCombinedData object and adds it to either valid or invalid dict.
 
@@ -588,7 +631,7 @@ class PbenchCombinedDataCollection:
         Returns
         -------
         None
-        
+
         """
 
         new_run = PbenchCombinedData(self.diagnostic_checks)
@@ -616,14 +659,14 @@ class PbenchCombinedDataCollection:
               we already know the run exists and which one it is ahead of
               time which we don't since this is one of the checks we need
               to perform.
-            
+
         TODO: This is redundant code because it is a direct copy of the
-              data_check method from the PbenchCombinedData class, so 
+              data_check method from the PbenchCombinedData class, so
               should figure out a better way to do this.
 
         Parameters
         ----------
-        doc 
+        doc
             json result data from result doc from result index
 
         Returns
@@ -642,23 +685,23 @@ class PbenchCombinedDataCollection:
             diagnostic_update, issue = check.get_vals()
             result_diagnostic.update(diagnostic_update)
             invalid |= issue
-        
+
         result_diagnostic["valid"] = not invalid
         return result_diagnostic
-    
+
     def add_result(self, doc):
         """Adds result doc to a PbenchCombinedData object if valid.
 
         Given a result doc, first calls the screening check to determine
         the diagnostic info, and update the result trackers.
-        
+
         If valid, finds the associated run using run_id
         and adds result data to that PbenchCombinedData Object. It then adds
         host and disk names to the same object, as well as client names, and
         updates all the trackers accordingly. We do this here, because once
         the result data is added, the PbenchCombinedData object stores all the
         information required to add these new values.
-        
+
         If invalid, we add the diagnostic data collected to the result doc.
         If there was a result id we add it to invalid dict's result dict with
         the id as the key, and if it was missing we create a temp id and use
@@ -672,7 +715,7 @@ class PbenchCombinedDataCollection:
         Returns
         -------
         None
-        
+
         """
 
         result_diagnostic_return = self.result_screening_check(doc)
@@ -681,33 +724,41 @@ class PbenchCombinedDataCollection:
             associated_run_id = doc["_source"]["run"]["id"]
             associated_run = self.run_id_to_data_valid[associated_run_id]
             associated_run.add_result_data(doc, result_diagnostic_return)
-            associated_run.add_host_and_disk_names(self.diskhost_map, self.incoming_url, self.session)
-            self.update_diagnostic_trackers(associated_run.data["diagnostics"]["fio_extraction"], "fio_extraction")
+            associated_run.add_host_and_disk_names(
+                self.diskhost_map, self.incoming_url, self.session
+            )
+            self.update_diagnostic_trackers(
+                associated_run.data["diagnostics"]["fio_extraction"], "fio_extraction"
+            )
             associated_run.add_client_names(self.clientnames_map, self.es)
-            self.update_diagnostic_trackers(associated_run.data["diagnostics"]["client_side"], "client_side")
+            self.update_diagnostic_trackers(
+                associated_run.data["diagnostics"]["client_side"], "client_side"
+            )
             # NOTE: though host and disk names may be marked invalid, a valid output
             #       is always given in those cases, so we will effectively always have
-            #       valid hostdisk names. However client_names marked as invalid will 
+            #       valid hostdisk names. However client_names marked as invalid will
             #       not be added to valid data. The code below then moves the associated run
             #       to the invalid dict updating trackers, but since the initial code
             #       treated this as optional and left valid runs valid we do the same.
 
             # if associated_run.data["diagnostics"]["client_side"]["valid"] == False:
-                # associated_run = self.run_id_to_data_valid.pop(associated_run_id)
-                # self.invalid["client_side"][associated_run_id] = associated_run
-                # self.trackers["result"]["valid"] -= 1
+            # associated_run = self.run_id_to_data_valid.pop(associated_run_id)
+            # self.invalid["client_side"][associated_run_id] = associated_run
+            # self.trackers["result"]["valid"] -= 1
         else:
-            doc.update({"diagnostics": {"result" : result_diagnostic_return}})
+            doc.update({"diagnostics": {"result": result_diagnostic_return}})
             if result_diagnostic_return["missing._id"] == False:
                 self.invalid["result"][result_diagnostic_return["missing._id"]] = doc
             else:
-                self.invalid["result"]["missing_so_temo_id_" + str(self.result_temp_id)] = doc
+                self.invalid["result"][
+                    "missing_so_temo_id_" + str(self.result_temp_id)
+                ] = doc
                 self.result_temp_id += 1
-    
-    #TODO: Maybe add sosreports from here. But will determine this once moved on
+
+    # TODO: Maybe add sosreports from here. But will determine this once moved on
     #      from merge_sos_and_perf_parallel.py file
 
- 
+
 class DiagnosticCheck(ABC):
     """Abstract class that provides template for writing custom checks.
 
@@ -719,15 +770,14 @@ class DiagnosticCheck(ABC):
         True or False and written such that True means an error.
         So this then assumes every record is initially valid.
     issues : bool
-        False if doc is valid, True otherwise 
-    
+        False if doc is valid, True otherwise
+
     """
 
     def __init__(self):
-        """Calls initialize_properties to initialize instance variables
-        """
+        """Calls initialize_properties to initialize instance variables"""
         self.initialize_properties()
-    
+
     @property
     @abstractmethod
     def diagnostic_names(self) -> list:
@@ -736,13 +786,13 @@ class DiagnosticCheck(ABC):
         Returns
         -------
         diagnostic_names : list[str]
-            List of names of properties the check is checking. Needs to be 
+            List of names of properties the check is checking. Needs to be
             defined by extending concrete classes
-            
+
         """
         ...
- 
-    # appropriately updates instance variables 
+
+    # appropriately updates instance variables
     @abstractmethod
     def diagnostic(self, doc) -> None:
         """Function specifying how to perform diagnostic to be implemented by extending classes.
@@ -760,10 +810,10 @@ class DiagnosticCheck(ABC):
         Returns
         -------
         None
-        
+
         """
         self.initialize_properties()
-    
+
     def initialize_properties(self) -> None:
         """Initializes all attributes specified above.
 
@@ -771,7 +821,7 @@ class DiagnosticCheck(ABC):
         and uses the diagnostic_names to be defined by the
         extending class to populate it. Sets issues to False,
         setting initially record to be valid.
-        
+
         Returns
         -------
         None
@@ -781,7 +831,7 @@ class DiagnosticCheck(ABC):
         self.issues = False
         for tracker in self.diagnostic_names:
             self.diagnostic_return[tracker]
-    
+
     def default_value(self) -> bool:
         """Function defining default value for diagnostic_return to be False.
 
@@ -799,14 +849,14 @@ class DiagnosticCheck(ABC):
 
     def get_vals(self):
         """Retruns the diagnostic_return and issues attributes
-        
+
         Returns
         -------
         vals : tuple[dict, bool]
             A tuple of the diagnostic_return and issues attributes
         """
         return self.diagnostic_return, self.issues
-    
+
 
 class ControllerDirRunCheck(DiagnosticCheck):
     _diagnostic_names = ["missing_ctrl_dir"]
@@ -821,10 +871,14 @@ class ControllerDirRunCheck(DiagnosticCheck):
             self.diagnostic_return["missing_ctrl_dir"] = True
             self.issues = True
 
+
 class SosreportRunCheck(DiagnosticCheck):
 
-    _diagnostic_names = ["missing_sosreports", 
-        "non_2_sosreports", "sosreports_diff_hosts"]
+    _diagnostic_names = [
+        "missing_sosreports",
+        "non_2_sosreports",
+        "sosreports_diff_hosts",
+    ]
 
     @property
     def diagnostic_names(self):
@@ -836,25 +890,25 @@ class SosreportRunCheck(DiagnosticCheck):
         if "sosreports" not in doc["_source"]:
             self.diagnostic_return["missing_sosreports"] = True
             self.issues = True
-        
+
         # check if run has exactly 2 sosreports
         elif len(doc["_source"]["sosreports"]) != 2:
             self.diagnostic_return["non_2_sosreports"] = True
             self.issues = True
-        
+
         else:
             # check if 2 sosreports have different hosts
             first = doc["_source"]["sosreports"][0]
             second = doc["_source"]["sosreports"][1]
             if first["hostname-f"] != second["hostname-f"]:
                 self.diagnostic_return["sosreports_diff_hosts"] = True
-                self.issues = True     
+                self.issues = True
+
 
 class SeenResultCheck(DiagnosticCheck):
-
-    def __init__(self, results_seen : dict):
+    def __init__(self, results_seen: dict):
         """Initialization function
-        
+
         Takes in results_seen because it is needed to
         perform one of the checks. Also stores it in an attribute.
 
@@ -862,7 +916,7 @@ class SeenResultCheck(DiagnosticCheck):
         ----------
         results_seen : dict
             Map from result_id seen to True
-        
+
         """
         self.results_seen = results_seen
 
@@ -871,7 +925,7 @@ class SeenResultCheck(DiagnosticCheck):
     @property
     def diagnostic_names(self):
         return self._diagnostic_names
-    
+
     def diagnostic(self, doc):
         super().diagnostic(doc)
         # first check if result doc has a result id field
@@ -880,7 +934,7 @@ class SeenResultCheck(DiagnosticCheck):
             self.issues = True
         else:
             result_id = doc["_id"]
-            
+
             # second check if result has been seen already
             # NOTE: not sure if this check is really necessary (whether
             # a case where duplicate results occur exists)
@@ -889,6 +943,7 @@ class SeenResultCheck(DiagnosticCheck):
                 self.issues = True
             else:
                 self.results_seen[result_id] = True
+
 
 class BaseResultCheck(DiagnosticCheck):
 
@@ -923,12 +978,12 @@ class BaseResultCheck(DiagnosticCheck):
 
     def diagnostic(self, doc):
         super().diagnostic(doc)
-        
+
         self.issues = True
         # unforunately very ugly if statement to check what
         # fields are missing to create comprehensive diagnostic info
         if "_source" not in doc:
-            self.diagnostic_return["missing._source"] = True 
+            self.diagnostic_return["missing._source"] = True
         elif "run" not in doc["_source"]:
             self.diagnostic_return["missing._source/run"] = True
         elif "id" not in doc["_source"]["run"]:
@@ -976,10 +1031,9 @@ class BaseResultCheck(DiagnosticCheck):
 
 
 class RunNotInDataResultCheck(DiagnosticCheck):
-
-    def __init__(self, run_id_to_data_dict : dict):
+    def __init__(self, run_id_to_data_dict: dict):
         """Initialization function
-        
+
         Takes in run_id_to_data_dict because it is needed to
         perform one of the checks. Also stores it in an attribute.
 
@@ -987,7 +1041,7 @@ class RunNotInDataResultCheck(DiagnosticCheck):
         ----------
         run_id_to_data : dict
             Map from run_id seen to PbenchCombinedData Object
-        
+
         """
         self.run_id_to_data_dict = run_id_to_data_dict
 
@@ -1002,6 +1056,7 @@ class RunNotInDataResultCheck(DiagnosticCheck):
         if doc["_source"]["run"]["id"] not in self.run_id_to_data_dict:
             self.diagnostic_return["run_not_in_data"] = True
             self.issues = True
+
 
 class ClientHostAggregateResultCheck(DiagnosticCheck):
     # aggregate_result not sure what this is checking
@@ -1019,10 +1074,9 @@ class ClientHostAggregateResultCheck(DiagnosticCheck):
 
 
 class FioExtractionCheck(DiagnosticCheck):
-
     def __init__(self, session):
         """Initialization function
-        
+
         Takes in session because it is needed to
         perform one of the checks. Also stores it in an attribute.
 
@@ -1030,15 +1084,14 @@ class FioExtractionCheck(DiagnosticCheck):
         ----------
         session : Session
             A session to make request to url
-        
+
         """
         self.session = session
         # FIXME: are these results we still want in failure cases?
         # default values in case of error
-        self.disk_host_names = ([],[])
+        self.disk_host_names = ([], [])
 
-    _diagnostic_names = ["session_response_unsuccessful",
-                        "response_invalid_json"]
+    _diagnostic_names = ["session_response_unsuccessful", "response_invalid_json"]
 
     @property
     def diagnostic_names(self):
@@ -1047,7 +1100,7 @@ class FioExtractionCheck(DiagnosticCheck):
     def diagnostic(self, doc):
         # here doc is the url to make a request to
         super().diagnostic(doc)
-        
+
         # check if the page is accessible
         response = self.session.get(doc, allow_redirects=True)
         if response.status_code != 200:  # successful
@@ -1055,15 +1108,15 @@ class FioExtractionCheck(DiagnosticCheck):
             self.issues = True
         else:
             try:
-                response.json() 
+                response.json()
             except ValueError:
                 self.diagnostic_return["response_invalid_json"] = True
                 self.issues = True
-        
+
+
 class ClientNamesCheck(DiagnosticCheck):
 
-    _diagnostic_names = ["0_clients",
-                        "2_or_more_clients"]
+    _diagnostic_names = ["0_clients", "2_or_more_clients"]
 
     @property
     def diagnostic_names(self):
@@ -1072,7 +1125,7 @@ class ClientNamesCheck(DiagnosticCheck):
     def diagnostic(self, doc):
         # here doc is the list of clientnames
         super().diagnostic(doc)
-        
+
         # Ignore result if 0 or more than 1 client names
         if not doc:
             self.diagnostic_return["0_clients"] = True
@@ -1082,7 +1135,8 @@ class ClientNamesCheck(DiagnosticCheck):
             self.issues = True
         else:
             pass
-            
+
+
 # TODO: There should be a way to specify the data source and the
 #       fields/properties desired from that source, and the data
 #       sources are filtered down as desired. And it autogenerates

@@ -24,7 +24,13 @@ def _month_gen(now: datetime):
     for m in rrule.rrule(rrule.MONTHLY, dtstart=first_month, until=last_month):
         yield f"{m.year:04}-{m.month:02}"
 
-def merge_run_result_index(es : Elasticsearch, month : str, record_limit : int, pbench_data : PbenchCombinedDataCollection) -> None:
+
+def merge_run_result_index(
+    es: Elasticsearch,
+    month: str,
+    record_limit: int,
+    pbench_data: PbenchCombinedDataCollection,
+) -> None:
     """Merges all run and result data for a given month and stores it inside pbench_data.
 
     Given a month, gets the run_index and result_index names for the month specified.
@@ -33,7 +39,7 @@ def merge_run_result_index(es : Elasticsearch, month : str, record_limit : int, 
     going through more run data. Then loops over all result docs in the month
     of type 'pbench-result-data-sample' and adds it to pbench_data.
 
-    #NOTE: Need to still go through all result data for the month to ensure we 
+    #NOTE: Need to still go through all result data for the month to ensure we
            retrive all result data associated with the runs added, since we
            don't know more specifically the associations within the index, this
            is the best we can do so far.
@@ -54,7 +60,7 @@ def merge_run_result_index(es : Elasticsearch, month : str, record_limit : int, 
     pbench_data : PbenchCombinedDataCollection
         Store for all the processed pbench data and diagnostic
         and tracking information.
-    
+
     Returns
     -------
     None
@@ -73,7 +79,7 @@ def merge_run_result_index(es : Elasticsearch, month : str, record_limit : int, 
         pbench_data.add_result(result_doc)
 
 
-def es_data_gen(es : Elasticsearch, index : str, doc_type : str):
+def es_data_gen(es: Elasticsearch, index: str, doc_type: str):
     """Yield documents where the `run.script` field is "fio" for the given index
     and document type.
 
@@ -90,7 +96,7 @@ def es_data_gen(es : Elasticsearch, index : str, doc_type : str):
     -------
     doc : json
         json data representing doc and its contents
-    
+
     """
     query = {"query": {"query_string": {"query": "run.script:fio"}}}
 
@@ -112,6 +118,7 @@ def main(args):
 
     if args.profile_memory_usage:
         from guppy import hpy
+
         memprof = hpy()
     else:
         memprof = None
@@ -135,7 +142,7 @@ def main(args):
 
     scan_start = time.time()
     now = datetime.utcfromtimestamp(scan_start)
-    
+
     # TODO: This doesn't work because modifying class attributes. Need to figure out work around
     #       and see if ideally we could do this processing on the cloud somehow.
     # pool.starmap(merge_run_result_index, [(es, month, args.record_limit, pbench_data) for month in _month_gen(now)])
@@ -145,7 +152,7 @@ def main(args):
         if args.record_limit != -1:
             if len(pbench_data.run_id_to_data_valid) >= args.record_limit:
                 break
-    
+
     # NOTE: Not writing sosreports and results to files. Will work on this step
     #       of sosreport processing, etc next.
 
@@ -178,6 +185,7 @@ def main(args):
 
     return 0
 
+
 def parse_arguments() -> argparse.Namespace:
     """Specifies Command Line argument parsing.
 
@@ -189,20 +197,49 @@ def parse_arguments() -> argparse.Namespace:
     args : argparse.Namespace
         arguments passed in stored with easily accessible
         variable names
-    
+
     """
-    parser = argparse.ArgumentParser(description= "Host and Server Information")
-    parser.add_argument("es_host", action="store", type=str, help="Elasticsearch host name")
-    parser.add_argument("es_port", action="store", type=int, help="Elasticsearch port number")
-    parser.add_argument("url_prefix", action="store", type=str, help="Pbench server url prefix to extract host and disk names")
+    parser = argparse.ArgumentParser(description="Host and Server Information")
+    parser.add_argument(
+        "es_host", action="store", type=str, help="Elasticsearch host name"
+    )
+    parser.add_argument(
+        "es_port", action="store", type=int, help="Elasticsearch port number"
+    )
+    parser.add_argument(
+        "url_prefix",
+        action="store",
+        type=str,
+        help="Pbench server url prefix to extract host and disk names",
+    )
     # parser.add_argument("sosreport_host_server", action="store" ,dest="sos_host", type=str, help="Sosreport host server to access sosreport info")
-    parser.add_argument("--cpu", action='store', dest="cpu_n", type=int, default=1, help="Number of CPUs to be used")
-    parser.add_argument("--limit", action='store', dest="record_limit", type=int, default=-1, help="Number of desired acceptable results for processing")
+    parser.add_argument(
+        "--cpu",
+        action="store",
+        dest="cpu_n",
+        type=int,
+        default=1,
+        help="Number of CPUs to be used",
+    )
+    parser.add_argument(
+        "--limit",
+        action="store",
+        dest="record_limit",
+        type=int,
+        default=-1,
+        help="Number of desired acceptable results for processing",
+    )
     # TODO: need to figure out how to allow both limiting and non-limiting options with argparse. But suppose would never want to limit in real use case.
     # Temporarily used -1 as default and it meaning all
-    parser.add_argument("--profile", action='store_true', dest="profile_memory_usage", help="Want memory usage profile")
+    parser.add_argument(
+        "--profile",
+        action="store_true",
+        dest="profile_memory_usage",
+        help="Want memory usage profile",
+    )
     args = parser.parse_args()
     return args
+
 
 # point of entry
 if __name__ == "__main__":
