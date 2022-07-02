@@ -550,14 +550,29 @@ class PbenchCombinedDataCollection:
 
         return str(
             "---------------\n"
-            # "Valid Data: \n" +
-            # str(self.run_id_to_data_valid) + "\n" +
-            # "Results Seen: \n" +
-            # str(self.results_seen) + "\n" +
-            # "Results Seen: " + str(len(self.results_seen)) + "\n" +
-            # "Diagnostic Checks Used: \n" + str(self.diagnostic_checks) + "\n" +
-            + "Trackers: \n"
+            # + "Valid Data: \n"
+            # + str(self.run_id_to_data_valid)
+            # + "\nResults Seen: \n"
+            # + str(self.results_seen)
+            # + "\nResults Seen: "
+            # + str(len(self.results_seen))
+            # + "\nDiagnostic Checks Used: \n"
+            # + str(self.diagnostic_checks)
+            + "\nTrackers: \n"
             + str(self.trackers)
+            + "\n---------------\n"
+        )
+    
+    def print_stats(self):
+        print(
+            "\nTrackers: \n"
+            + str(self.trackers)
+            + "\n No. of valid data: \n"
+            + str(len(self.run_id_to_data_valid))
+            + "\n No. of invalid run data: \n"
+            + str(len(self.invalid["run"]))
+            + "\n No. of results seen: \n"
+            + str(len(self.results_seen))
             + "\n---------------\n"
         )
 
@@ -760,12 +775,21 @@ class PbenchCombinedDataCollection:
     def merge_dict(self, dict1, dict2):
         return dict(Counter(dict1) + Counter(dict2))
 
+    def merge_dict2(self, dicts):
+        ret = defaultdict(int)
+        for d in dicts:
+            for k, v in d.items():
+                ret[k] += v
+        return dict(ret)
+
     def combine_data(self, other):
         self.run_id_to_data_valid.update(other.run_id_to_data_valid)
-        self.invalid.update(other.invalid)
+        for type in self.invalid:
+            self.invalid[type].update(other.invalid[type])
         self.results_seen.update(other.results_seen)
         for type in self.trackers:
-            self.trackers[type] = self.merge_dict(self.trackers[type], other.trackers[type])
+            # self.trackers[type] = self.merge_dict(self.trackers[type], other.trackers[type])
+            self.trackers[type] = self.merge_dict2([self.trackers[type], other.trackers[type]])
         self.result_temp_id = other.result_temp_id
         self.diskhost_map.update(other.diskhost_map)
         self.clientnames_map.update(other.clientnames_map)

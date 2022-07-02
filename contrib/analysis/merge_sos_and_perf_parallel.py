@@ -117,10 +117,13 @@ def merge_data(month1: str, month2: str, es : Elasticsearch, record_limit : int,
     month2_data = PbenchCombinedDataCollection(incoming_url, session, es)
     merge_run_result_index(es, month1, record_limit, month1_data)
     merge_run_result_index(es, month2, record_limit, month2_data)
-    print(month1_data)
-    print(month2_data)
+    # print(month1_data)
+    # print(month2_data)
+    month1_data.print_stats()
+    month2_data.print_stats()
     month1_data.combine_data(month2_data)
-    print(month1_data)
+    # print(month1_data)
+    month1_data.print_stats()
 
 def main(args):
 
