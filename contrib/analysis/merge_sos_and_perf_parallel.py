@@ -2,7 +2,7 @@
 
 import argparse
 
-# import multiprocessing
+import multiprocessing
 import requests
 import time
 
@@ -112,6 +112,16 @@ def es_data_gen(es: Elasticsearch, index: str, doc_type: str):
         yield doc
 
 
+def merge_data(month1: str, month2: str, es : Elasticsearch, record_limit : int, incoming_url : str, session : requests.Session):
+    month1_data = PbenchCombinedDataCollection(incoming_url, session, es)
+    month2_data = PbenchCombinedDataCollection(incoming_url, session, es)
+    merge_run_result_index(es, month1, record_limit, month1_data)
+    merge_run_result_index(es, month2, record_limit, month2_data)
+    print(month1_data)
+    print(month2_data)
+    month1_data.combine_data(month2_data)
+    print(month1_data)
+
 def main(args):
 
     # URL prefix to fetch unpacked data
@@ -129,8 +139,8 @@ def main(args):
 
     # We create the multiprocessing pool first to avoid forking a sub-process
     # with lots of memory allocated.
-    # ncpus = multiprocessing.cpu_count() - 1 if args.cpu_n == 0 else args.cpu_n
-    # pool = multiprocessing.Pool(ncpus) if ncpus != 1 else None
+    ncpus = multiprocessing.cpu_count() - 1 if args.cpu_n == 0 else args.cpu_n
+    pool = multiprocessing.Pool(ncpus) if ncpus != 1 else None
 
     es = Elasticsearch(
         [f"{args.es_host}:{args.es_port}"], timeout=60
@@ -139,7 +149,7 @@ def main(args):
     session = requests.Session()
     ua = session.headers["User-Agent"]
     session.headers.update({"User-Agent": f"{ua} -- merge_sos_and_perf_parallel"})
-    pbench_data = PbenchCombinedDataCollection(incoming_url, session, es)
+    # pbench_data = PbenchCombinedDataCollection(incoming_url, session, es)
 
     scan_start = time.time()
     now = datetime.utcfromtimestamp(scan_start)
@@ -148,11 +158,13 @@ def main(args):
     #       and see if ideally we could do this processing on the cloud somehow.
     # pool.starmap(merge_run_result_index, [(es, month, args.record_limit, pbench_data) for month in _month_gen(now)])
 
-    for month in _month_gen(now):
-        merge_run_result_index(es, month, args.record_limit, pbench_data)
-        if args.record_limit != -1:
-            if len(pbench_data.run_id_to_data_valid) >= args.record_limit:
-                break
+    # for month in _month_gen(now):
+    #     merge_run_result_index(es, month, args.record_limit, pbench_data)
+    #     if args.record_limit != -1:
+    #         if len(pbench_data.run_id_to_data_valid) >= args.record_limit:
+    #             break
+
+    merge_data("2021-07", "2021-08", es, args.record_limit, incoming_url, session)
 
     # NOTE: Not writing sosreports and results to files. Will work on this step
     #       of sosreport processing, etc next.
@@ -175,7 +187,7 @@ def main(args):
     scan_end = time.time()
     duration = scan_end - scan_start
 
-    print(pbench_data)
+    # print(pbench_data)
     print(f"--- merging run and result data took {duration:0.2f} seconds", flush=True)
 
     if memprof:

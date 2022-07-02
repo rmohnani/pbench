@@ -558,7 +558,7 @@ class PbenchCombinedDataCollection:
             # "Diagnostic Checks Used: \n" + str(self.diagnostic_checks) + "\n" +
             + "Trackers: \n"
             + str(self.trackers)
-            + "---------------\n"
+            + "\n---------------\n"
         )
 
     def trackers_initialization(self) -> None:
@@ -756,6 +756,16 @@ class PbenchCombinedDataCollection:
 
     # TODO: Maybe add sosreports from here. But will determine this once moved on
     #      from merge_sos_and_perf_parallel.py file
+
+    def combine_data(self, other : PbenchCombinedDataCollection):
+        self.run_id_to_data_valid.update(other.run_id_to_data_valid)
+        self.invalid.update(other.invalid)
+        self.results_seen.update(other.results_seen)
+        self.trackers.update(other.trackers)
+        self.result_temp_id = other.result_temp_id
+        self.diskhost_map.update(other.diskhost_map)
+        self.clientnames_map.update(other.clientnames_map)
+
 
 
 class DiagnosticCheck(ABC):
