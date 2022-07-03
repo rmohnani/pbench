@@ -96,7 +96,8 @@ def merge_run_result_mp(es: Elasticsearch, month: str, record_limit: int, incomi
     for result_doc in es_data_gen(es, result_index, "pbench-result-data-sample"):
         pbench_data.add_result(result_doc)
     
-    return json.dumps(pbench_data.to_json(), cls=ComplexEncoder)
+    # return json.dumps(pbench_data.to_json(), cls=ComplexEncoder)
+    return "hi"
 
 
 def es_data_gen(es: Elasticsearch, index: str, doc_type: str):
