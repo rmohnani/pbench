@@ -591,7 +591,7 @@ class PbenchCombinedDataCollection:
         )
     
     def print_json(self):
-        print(json.dumps(self.to_json(), cls=ComplexEncoder))
+        print(json.dumps(self.to_json(), cls=ComplexEncoder, check_circular=False))
 
     def trackers_initialization(self) -> None:
         """Initializes all diagnostic tracker values to 0.
