@@ -79,6 +79,24 @@ def merge_run_result_index(
     for result_doc in es_data_gen(es, result_index, "pbench-result-data-sample"):
         pbench_data.add_result(result_doc)
 
+def merge_run_result_mp(es: Elasticsearch, month: str, record_limit: int, incoming_url : str, session : requests.Session):
+
+    pbench_data = PbenchCombinedDataCollection(incoming_url, session, es)
+
+    run_index = f"dsa-pbench.v4.run.{month}"
+    result_index = f"dsa-pbench.v4.result-data.{month}-*"
+
+    for run_doc in es_data_gen(es, run_index, "pbench-run"):
+        pbench_data.add_run(run_doc)
+        if record_limit != -1:
+            if pbench_data.trackers["run"]["valid"] >= record_limit:
+                break
+
+    for result_doc in es_data_gen(es, result_index, "pbench-result-data-sample"):
+        pbench_data.add_result(result_doc)
+    
+    return pbench_data
+
 
 def es_data_gen(es: Elasticsearch, index: str, doc_type: str):
     """Yield documents where the `run.script` field is "fio" for the given index
@@ -152,7 +170,16 @@ def main(args):
     session = requests.Session()
     ua = session.headers["User-Agent"]
     session.headers.update({"User-Agent": f"{ua} -- merge_sos_and_perf_parallel"})
-    # pbench_data = PbenchCombinedDataCollection(incoming_url, session, es)
+    pbench_data = PbenchCombinedDataCollection(incoming_url, session, es)
+
+    results = pool.starmap(merge_run_result_mp, [(es, month, args.record_limit, incoming_url, session) for month in _month_gen(now)])
+    for result in results:
+        result.print_stats()
+        pbench_data.combine_data(result)
+        if args.record_limit != -1:
+            if len(pbench_data.run_id_to_data_valid) >= args.record_limit:
+                break
+
 
     scan_start = time.time()
     now = datetime.utcfromtimestamp(scan_start)
@@ -163,11 +190,15 @@ def main(args):
 
     # for month in _month_gen(now):
     #     merge_run_result_index(es, month, args.record_limit, pbench_data)
-    #     if args.record_limit != -1:
-    #         if len(pbench_data.run_id_to_data_valid) >= args.record_limit:
-    #             break
+        # if args.record_limit != -1:
+        #     if len(pbench_data.run_id_to_data_valid) >= args.record_limit:
+        #         break
 
     merge_data("2021-07", "2021-08", es, args.record_limit, incoming_url, session)
+
+    # Parallel mergin
+
+
 
     # NOTE: Not writing sosreports and results to files. Will work on this step
     #       of sosreport processing, etc next.
@@ -190,7 +221,7 @@ def main(args):
     scan_end = time.time()
     duration = scan_end - scan_start
 
-    # print(pbench_data)
+    pbench_data.print_stats()
     print(f"--- merging run and result data took {duration:0.2f} seconds", flush=True)
 
     if memprof:

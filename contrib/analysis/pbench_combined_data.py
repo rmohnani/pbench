@@ -772,10 +772,8 @@ class PbenchCombinedDataCollection:
     # TODO: Maybe add sosreports from here. But will determine this once moved on
     #      from merge_sos_and_perf_parallel.py file
 
-    def merge_dict(self, dict1, dict2):
-        return dict(Counter(dict1) + Counter(dict2))
 
-    def merge_dict2(self, dicts):
+    def merge_dicts(self, dicts):
         ret = defaultdict(int)
         for d in dicts:
             for k, v in d.items():
@@ -788,8 +786,7 @@ class PbenchCombinedDataCollection:
             self.invalid[type].update(other.invalid[type])
         self.results_seen.update(other.results_seen)
         for type in self.trackers:
-            # self.trackers[type] = self.merge_dict(self.trackers[type], other.trackers[type])
-            self.trackers[type] = self.merge_dict2([self.trackers[type], other.trackers[type]])
+            self.trackers[type] = self.merge_dicts([self.trackers[type], other.trackers[type]])
         self.result_temp_id = other.result_temp_id
         self.diskhost_map.update(other.diskhost_map)
         self.clientnames_map.update(other.clientnames_map)
