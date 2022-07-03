@@ -1216,8 +1216,8 @@ class ClientNamesCheck(DiagnosticCheck):
         else:
             pass
     
-    def to_json(self):
-        return self.__dict__
+    # def to_json(self):
+    #     return self.__dict__
 
 
 # TODO: There should be a way to specify the data source and the
