@@ -10,7 +10,7 @@ import json
 from datetime import datetime
 from dateutil import rrule
 from dateutil.relativedelta import relativedelta
-from pbench_combined_data import PbenchCombinedDataCollection
+from pbench_combined_data import ComplexEncoder, PbenchCombinedDataCollection
 
 from elasticsearch1 import Elasticsearch
 from elasticsearch1.helpers import scan
@@ -96,7 +96,7 @@ def merge_run_result_mp(es: Elasticsearch, month: str, record_limit: int, incomi
     for result_doc in es_data_gen(es, result_index, "pbench-result-data-sample"):
         pbench_data.add_result(result_doc)
     
-    return pbench_data
+    return json.dumps(pbench_data.to_json(), cls=ComplexEncoder)
 
 
 def es_data_gen(es: Elasticsearch, index: str, doc_type: str):
@@ -182,7 +182,7 @@ def main(args):
     # seems unnecessary so I want to find a better way
     # THis broken can't return object from function, need to return string or int. So ideally dump object into json
     # string format and load it in afterwards. 
-    # results = pool.starmap(merge_run_result_mp, [(es, month, args.record_limit, incoming_url, session) for month in _month_gen(now)])
+    results = pool.starmap(merge_run_result_mp, [(es, month, args.record_limit, incoming_url, session) for month in _month_gen(now)])
     # for result in results:
     #     result.print_stats()
     #     pbench_data.combine_data(result)

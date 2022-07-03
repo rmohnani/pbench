@@ -796,6 +796,7 @@ class PbenchCombinedDataCollection:
         return dict(run_id_to_data_valid=self.run_id_to_data_valid,
                     invalid = self.invalid,
                     results_seen = self.results_seen,
+                    # diagnostic_checks = self.diagnostic_checks,
                     # es=self.es,
                     incoming_url=self.incoming_url,
                     # session=self.session,
