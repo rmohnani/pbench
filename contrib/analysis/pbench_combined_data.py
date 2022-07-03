@@ -965,6 +965,9 @@ class SosreportRunCheck(DiagnosticCheck):
             if first["hostname-f"] != second["hostname-f"]:
                 self.diagnostic_return["sosreports_diff_hosts"] = True
                 self.issues = True
+    
+    def to_json(self):
+        return self.__dict__
 
 
 class SeenResultCheck(DiagnosticCheck):
@@ -1005,6 +1008,9 @@ class SeenResultCheck(DiagnosticCheck):
                 self.issues = True
             else:
                 self.results_seen[result_id] = True
+    
+    def to_json(self):
+        return self.__dict__
 
 
 class BaseResultCheck(DiagnosticCheck):
@@ -1090,6 +1096,9 @@ class BaseResultCheck(DiagnosticCheck):
             self.diagnostic_return["missing._source/benchmark/rw"] = True
         else:
             self.issues = False
+    
+    def to_json(self):
+        return self.__dict__
 
 
 class RunNotInDataResultCheck(DiagnosticCheck):
@@ -1118,6 +1127,9 @@ class RunNotInDataResultCheck(DiagnosticCheck):
         if doc["_source"]["run"]["id"] not in self.run_id_to_data_dict:
             self.diagnostic_return["run_not_in_data"] = True
             self.issues = True
+    
+    def to_json(self):
+        return self.__dict__
 
 
 class ClientHostAggregateResultCheck(DiagnosticCheck):
@@ -1133,6 +1145,9 @@ class ClientHostAggregateResultCheck(DiagnosticCheck):
         if doc["_source"]["sample"]["client_hostname"] == "all":
             self.diagnostic_return["client_hostname_all"] = True
             self.issues = True
+
+    def to_json(self):
+        return self.__dict__
 
 
 class FioExtractionCheck(DiagnosticCheck):
@@ -1175,6 +1190,9 @@ class FioExtractionCheck(DiagnosticCheck):
                 self.diagnostic_return["response_invalid_json"] = True
                 self.issues = True
 
+    def to_json(self):
+        return self.__dict__
+
 
 class ClientNamesCheck(DiagnosticCheck):
 
@@ -1197,6 +1215,9 @@ class ClientNamesCheck(DiagnosticCheck):
             self.issues = True
         else:
             pass
+    
+    def to_json(self):
+        return self.__dict__
 
 
 # TODO: There should be a way to specify the data source and the
