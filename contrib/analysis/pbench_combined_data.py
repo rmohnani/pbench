@@ -793,17 +793,19 @@ class PbenchCombinedDataCollection:
         '''
         convert the instance of this class to json
         '''
-        return dict(run_id_to_data_valid=self.run_id_to_data_valid,
-                    invalid = self.invalid,
-                    results_seen = self.results_seen,
-                    # diagnostic_checks = self.diagnostic_checks,
-                    # es=self.es,
-                    incoming_url=self.incoming_url,
-                    # session=self.session,
-                    trackers=self.trackers,
-                    result_temp_id = self.result_temp_id,
-                    diskhost_map=self.diskhost_map,
-                    clientnames_map=self.clientnames_map)
+        return dict(
+            # run_id_to_data_valid=self.run_id_to_data_valid,
+            # invalid = self.invalid,
+            # results_seen = self.results_seen,
+            # diagnostic_checks = self.diagnostic_checks,
+            # es=self.es,
+            # incoming_url=self.incoming_url,
+            # session=self.session,
+            # trackers=self.trackers,
+            # result_temp_id = self.result_temp_id,
+            # diskhost_map=self.diskhost_map,
+            # clientnames_map=self.clientnames_map
+        )
 
     def merge_dicts(self, dicts):
         ret = defaultdict(int)
