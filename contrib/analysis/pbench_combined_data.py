@@ -1009,8 +1009,8 @@ class SeenResultCheck(DiagnosticCheck):
             else:
                 self.results_seen[result_id] = True
     
-    # def to_json(self):
-    #     return self.__dict__
+    def to_json(self):
+        return self.__dict__
 
 
 class BaseResultCheck(DiagnosticCheck):
