@@ -912,6 +912,9 @@ class DiagnosticCheck(ABC):
             A tuple of the diagnostic_return and issues attributes
         """
         return self.diagnostic_return, self.issues
+    
+    def to_json(self):
+        return self.__dict__
 
 
 class ControllerDirRunCheck(DiagnosticCheck):
