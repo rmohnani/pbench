@@ -966,8 +966,8 @@ class SosreportRunCheck(DiagnosticCheck):
                 self.diagnostic_return["sosreports_diff_hosts"] = True
                 self.issues = True
     
-    def to_json(self):
-        return self.__dict__
+    # def to_json(self):
+    #     return self.__dict__
 
 
 class SeenResultCheck(DiagnosticCheck):
@@ -1009,8 +1009,8 @@ class SeenResultCheck(DiagnosticCheck):
             else:
                 self.results_seen[result_id] = True
     
-    def to_json(self):
-        return self.__dict__
+    # def to_json(self):
+    #     return self.__dict__
 
 
 class BaseResultCheck(DiagnosticCheck):
@@ -1097,8 +1097,8 @@ class BaseResultCheck(DiagnosticCheck):
         else:
             self.issues = False
     
-    def to_json(self):
-        return self.__dict__
+    # def to_json(self):
+    #     return self.__dict__
 
 
 class RunNotInDataResultCheck(DiagnosticCheck):
@@ -1128,8 +1128,8 @@ class RunNotInDataResultCheck(DiagnosticCheck):
             self.diagnostic_return["run_not_in_data"] = True
             self.issues = True
     
-    def to_json(self):
-        return self.__dict__
+    # def to_json(self):
+    #     return self.__dict__
 
 
 class ClientHostAggregateResultCheck(DiagnosticCheck):
@@ -1146,8 +1146,8 @@ class ClientHostAggregateResultCheck(DiagnosticCheck):
             self.diagnostic_return["client_hostname_all"] = True
             self.issues = True
 
-    def to_json(self):
-        return self.__dict__
+    # def to_json(self):
+    #     return self.__dict__
 
 
 class FioExtractionCheck(DiagnosticCheck):
@@ -1190,8 +1190,8 @@ class FioExtractionCheck(DiagnosticCheck):
                 self.diagnostic_return["response_invalid_json"] = True
                 self.issues = True
 
-    def to_json(self):
-        return self.__dict__
+    # def to_json(self):
+    #     return self.__dict__
 
 
 class ClientNamesCheck(DiagnosticCheck):
