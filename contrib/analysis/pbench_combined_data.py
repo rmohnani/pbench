@@ -452,7 +452,7 @@ class PbenchCombinedData:
         '''
         convert the instance of this class to json
         '''
-        return self.__dict__
+        return dict(data=self.data, diagnostics=self.diagnostics)
 
 class ComplexEncoder(json.JSONEncoder):
     def default(self, obj):
@@ -793,9 +793,16 @@ class PbenchCombinedDataCollection:
         '''
         convert the instance of this class to json
         '''
-        new_dict = self.__dict__.copy()
-        self.__dict__.pop("diagnostic_checks")
-        return self.__dict__
+        return dict(run_id_to_data_valid=self.run_id_to_data_valid,
+                    invalid = self.invalid,
+                    results_seen = self.results_seen,
+                    es=self.es,
+                    incoming_url=self.incoming_url,
+                    session=self.session,
+                    trackers=self.trackers,
+                    result_temp_id = self.result_temp_id,
+                    diskhost_map=self.diskhost_map,
+                    clientnames_map=self.clientnames_map)
 
     def merge_dicts(self, dicts):
         ret = defaultdict(int)
