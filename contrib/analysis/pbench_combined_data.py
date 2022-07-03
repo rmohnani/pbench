@@ -454,6 +454,13 @@ class PbenchCombinedData:
         '''
         return json.dumps(self, indent = 4, default=lambda o: o.__dict__)
 
+class ComplexEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if hasattr(obj,'to_json'):
+            return obj.to_json()
+        else:
+            return json.JSONEncoder.default(self, obj)
+
 
 class PbenchCombinedDataCollection:
     """Wrapper object for for a collection of PbenchCombinedData Objects.
@@ -582,6 +589,9 @@ class PbenchCombinedDataCollection:
             + str(len(self.results_seen))
             + "\n---------------\n"
         )
+    
+    def print_json(self):
+        print(json.dumps(self.to_json(), cls=ComplexEncoder))
 
     def trackers_initialization(self) -> None:
         """Initializes all diagnostic tracker values to 0.

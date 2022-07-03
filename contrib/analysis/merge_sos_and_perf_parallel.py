@@ -143,7 +143,8 @@ def merge_data(month1: str, month2: str, es : Elasticsearch, record_limit : int,
     month1_data.combine_data(month2_data)
     # print(month1_data)
     month1_data.print_stats()
-    print(month1_data.__dict__)
+    month1_data.print_json()
+    # print(month1_data.__dict__)
 
 def main(args):
 
@@ -177,6 +178,8 @@ def main(args):
     scan_start = time.time()
     now = datetime.utcfromtimestamp(scan_start)
 
+    # forcing serializing and deseralizing of object which will probably take a lot of time.
+    # seems unnecessary so I want to find a better way
     # THis broken can't return object from function, need to return string or int. So ideally dump object into json
     # string format and load it in afterwards. 
     # results = pool.starmap(merge_run_result_mp, [(es, month, args.record_limit, incoming_url, session) for month in _month_gen(now)])
