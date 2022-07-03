@@ -448,6 +448,12 @@ class PbenchCombinedData:
         if self.data["diagnostics"]["client_side"]["valid"] is True:
             self.data["clientnames"] = client_names
 
+    def to_json(self):
+        '''
+        convert the instance of this class to json
+        '''
+        return json.dumps(self, indent = 4, default=lambda o: o.__dict__)
+
 
 class PbenchCombinedDataCollection:
     """Wrapper object for for a collection of PbenchCombinedData Objects.

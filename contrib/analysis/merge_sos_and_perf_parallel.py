@@ -143,7 +143,7 @@ def merge_data(month1: str, month2: str, es : Elasticsearch, record_limit : int,
     month1_data.combine_data(month2_data)
     # print(month1_data)
     month1_data.print_stats()
-    print(json.dumps(month1_data.__dict__))
+    print(json.dumps(month1_data.to_json()))
 
 def main(args):
 
