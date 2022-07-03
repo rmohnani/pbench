@@ -913,8 +913,8 @@ class DiagnosticCheck(ABC):
         """
         return self.diagnostic_return, self.issues
     
-    def to_json(self):
-        return self.__dict__
+    # def to_json(self):
+    #     return self.__dict__
 
 
 class ControllerDirRunCheck(DiagnosticCheck):
@@ -929,6 +929,9 @@ class ControllerDirRunCheck(DiagnosticCheck):
         if "controller_dir" not in doc["_source"]["@metadata"]:
             self.diagnostic_return["missing_ctrl_dir"] = True
             self.issues = True
+    
+    def to_json(self):
+        return self.__dict__
 
 
 class SosreportRunCheck(DiagnosticCheck):
