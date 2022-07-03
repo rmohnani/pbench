@@ -966,8 +966,8 @@ class SosreportRunCheck(DiagnosticCheck):
                 self.diagnostic_return["sosreports_diff_hosts"] = True
                 self.issues = True
     
-    # def to_json(self):
-    #     return self.__dict__
+    def to_json(self):
+        return self.__dict__
 
 
 class SeenResultCheck(DiagnosticCheck):
