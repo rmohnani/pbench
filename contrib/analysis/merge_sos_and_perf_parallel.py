@@ -172,6 +172,9 @@ def main(args):
     session.headers.update({"User-Agent": f"{ua} -- merge_sos_and_perf_parallel"})
     pbench_data = PbenchCombinedDataCollection(incoming_url, session, es)
 
+    scan_start = time.time()
+    now = datetime.utcfromtimestamp(scan_start)
+
     results = pool.starmap(merge_run_result_mp, [(es, month, args.record_limit, incoming_url, session) for month in _month_gen(now)])
     for result in results:
         result.print_stats()
@@ -179,10 +182,6 @@ def main(args):
         if args.record_limit != -1:
             if len(pbench_data.run_id_to_data_valid) >= args.record_limit:
                 break
-
-
-    scan_start = time.time()
-    now = datetime.utcfromtimestamp(scan_start)
 
     # TODO: This doesn't work because modifying class attributes. Need to figure out work around
     #       and see if ideally we could do this processing on the cloud somehow.
