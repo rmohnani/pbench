@@ -794,8 +794,8 @@ class PbenchCombinedDataCollection:
         convert the instance of this class to json
         '''
         new_dict = self.__dict__.copy()
-        new_dict.pop("diagnostic_checks")
-        return new_dict
+        self.__dict__.pop("diagnostic_checks")
+        return self.__dict__
 
     def merge_dicts(self, dicts):
         ret = defaultdict(int)
