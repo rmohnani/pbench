@@ -142,6 +142,7 @@ def merge_data(month1: str, month2: str, es : Elasticsearch, record_limit : int,
     month1_data.combine_data(month2_data)
     # print(month1_data)
     month1_data.print_stats()
+    print(month1_data.to_json())
 
 def main(args):
 
@@ -175,13 +176,15 @@ def main(args):
     scan_start = time.time()
     now = datetime.utcfromtimestamp(scan_start)
 
-    results = pool.starmap(merge_run_result_mp, [(es, month, args.record_limit, incoming_url, session) for month in _month_gen(now)])
-    for result in results:
-        result.print_stats()
-        pbench_data.combine_data(result)
-        if args.record_limit != -1:
-            if len(pbench_data.run_id_to_data_valid) >= args.record_limit:
-                break
+    # THis broken can't return object from function, need to return string or int. So ideally dump object into json
+    # string format and load it in afterwards. 
+    # results = pool.starmap(merge_run_result_mp, [(es, month, args.record_limit, incoming_url, session) for month in _month_gen(now)])
+    # for result in results:
+    #     result.print_stats()
+    #     pbench_data.combine_data(result)
+    #     if args.record_limit != -1:
+    #         if len(pbench_data.run_id_to_data_valid) >= args.record_limit:
+    #             break
 
     # TODO: This doesn't work because modifying class attributes. Need to figure out work around
     #       and see if ideally we could do this processing on the cloud somehow.
@@ -220,7 +223,7 @@ def main(args):
     scan_end = time.time()
     duration = scan_end - scan_start
 
-    pbench_data.print_stats()
+    # pbench_data.print_stats()
     print(f"--- merging run and result data took {duration:0.2f} seconds", flush=True)
 
     if memprof:

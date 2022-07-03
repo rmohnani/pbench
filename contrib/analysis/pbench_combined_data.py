@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 from collections import defaultdict
 import os
+import json
 
 from requests import Session
 from typing import Counter, Tuple, Type
@@ -772,6 +773,11 @@ class PbenchCombinedDataCollection:
     # TODO: Maybe add sosreports from here. But will determine this once moved on
     #      from merge_sos_and_perf_parallel.py file
 
+    def to_json(self):
+        '''
+        convert the instance of this class to json
+        '''
+        return json.dumps(self, indent = 4, default=lambda o: o.__dict__)
 
     def merge_dicts(self, dicts):
         ret = defaultdict(int)
