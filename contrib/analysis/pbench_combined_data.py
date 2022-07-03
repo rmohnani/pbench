@@ -1097,8 +1097,8 @@ class BaseResultCheck(DiagnosticCheck):
         else:
             self.issues = False
     
-    # def to_json(self):
-    #     return self.__dict__
+    def to_json(self):
+        return self.__dict__
 
 
 class RunNotInDataResultCheck(DiagnosticCheck):
@@ -1128,8 +1128,8 @@ class RunNotInDataResultCheck(DiagnosticCheck):
             self.diagnostic_return["run_not_in_data"] = True
             self.issues = True
     
-    # def to_json(self):
-    #     return self.__dict__
+    def to_json(self):
+        return self.__dict__
 
 
 class ClientHostAggregateResultCheck(DiagnosticCheck):
