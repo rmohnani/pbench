@@ -591,7 +591,7 @@ class PbenchCombinedDataCollection:
         )
     
     def print_json(self):
-        print(json.dumps(self.to_json(), cls=ComplexEncoder, check_circular=False))
+        print(json.dumps(self.to_json(), cls=ComplexEncoder,))
 
     def trackers_initialization(self) -> None:
         """Initializes all diagnostic tracker values to 0.
@@ -793,7 +793,9 @@ class PbenchCombinedDataCollection:
         '''
         convert the instance of this class to json
         '''
-        return self.__dict__
+        new_dict = self.__dict__.copy()
+        new_dict.pop("diagnostic_checks")
+        return new_dict
 
     def merge_dicts(self, dicts):
         ret = defaultdict(int)
