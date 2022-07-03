@@ -452,7 +452,7 @@ class PbenchCombinedData:
         '''
         convert the instance of this class to json
         '''
-        return json.dumps(self, indent = 4, default=lambda o: o.__dict__)
+        return self.__dict__
 
 class ComplexEncoder(json.JSONEncoder):
     def default(self, obj):
@@ -793,7 +793,7 @@ class PbenchCombinedDataCollection:
         '''
         convert the instance of this class to json
         '''
-        return json.dumps(self, indent = 4, default=lambda o: o.__dict__)
+        return self.__dict__
 
     def merge_dicts(self, dicts):
         ret = defaultdict(int)
