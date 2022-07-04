@@ -504,7 +504,7 @@ class PbenchCombinedDataCollection:
 
     """
 
-    def __init__(self, incoming_url: str, session: Session, es: Elasticsearch) -> None:
+    def __init__(self) -> None:
         """This initializes all the class attributes specified above
 
         Creates all other attributes, but stores the parameters
@@ -526,9 +526,9 @@ class PbenchCombinedDataCollection:
         # not sure if this is really required but will follow current
         # implementation for now
         self.results_seen = dict()
-        self.es = es
-        self.incoming_url = incoming_url
-        self.session = session
+        # self.es = es
+        # self.incoming_url = incoming_url
+        # self.session = session
         self.trackers = {
             "run": dict(),
             "result": dict(),
@@ -755,16 +755,17 @@ class PbenchCombinedDataCollection:
             associated_run_id = doc["_source"]["run"]["id"]
             associated_run = self.run_id_to_data_valid[associated_run_id]
             associated_run.add_result_data(doc, result_diagnostic_return)
-            associated_run.add_host_and_disk_names(
-                self.diskhost_map, self.incoming_url, self.session
-            )
-            self.update_diagnostic_trackers(
-                associated_run.data["diagnostics"]["fio_extraction"], "fio_extraction"
-            )
-            associated_run.add_client_names(self.clientnames_map, self.es)
-            self.update_diagnostic_trackers(
-                associated_run.data["diagnostics"]["client_side"], "client_side"
-            )
+            # associated_run.add_host_and_disk_names(
+            #     self.diskhost_map, self.incoming_url, self.session
+            # )
+            # self.update_diagnostic_trackers(
+            #     associated_run.data["diagnostics"]["fio_extraction"], "fio_extraction"
+            # )
+            # associated_run.add_client_names(self.clientnames_map, self.es)
+            # self.update_diagnostic_trackers(
+            #     associated_run.data["diagnostics"]["client_side"], "client_side"
+            # )
+
             # NOTE: though host and disk names may be marked invalid, a valid output
             #       is always given in those cases, so we will effectively always have
             #       valid hostdisk names. However client_names marked as invalid will
@@ -794,17 +795,17 @@ class PbenchCombinedDataCollection:
         convert the instance of this class to json
         '''
         return dict(
-            # run_id_to_data_valid=self.run_id_to_data_valid,
-            # invalid = self.invalid,
-            # results_seen = self.results_seen,
+            run_id_to_data_valid=self.run_id_to_data_valid,
+            invalid = self.invalid,
+            results_seen = self.results_seen,
             # diagnostic_checks = self.diagnostic_checks,
             # es=self.es,
             # incoming_url=self.incoming_url,
             # session=self.session,
-            # trackers=self.trackers,
-            # result_temp_id = self.result_temp_id,
-            # diskhost_map=self.diskhost_map,
-            # clientnames_map=self.clientnames_map
+            trackers=self.trackers,
+            result_temp_id = self.result_temp_id,
+            diskhost_map=self.diskhost_map,
+            clientnames_map=self.clientnames_map
         )
 
     def merge_dicts(self, dicts):
