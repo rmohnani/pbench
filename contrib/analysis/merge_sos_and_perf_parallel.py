@@ -174,7 +174,7 @@ def main(args):
     session = requests.Session()
     ua = session.headers["User-Agent"]
     session.headers.update({"User-Agent": f"{ua} -- merge_sos_and_perf_parallel"})
-    pbench_data = PbenchCombinedDataCollection(incoming_url, session, es)
+    pbench_data = PbenchCombinedDataCollection()
 
     scan_start = time.time()
     now = datetime.utcfromtimestamp(scan_start)
