@@ -214,7 +214,8 @@ def main(args):
 
     # Non serializable try with 2 months:
 
-    results = pool.starmap(merge_non_serializable, args_generator(["2021-07", "2021-08"], es, args.record_limit))
+    # ["2021-07", "2021-08"]
+    results = pool.starmap(merge_non_serializable, args_generator([month for month in _month_gen(now)], es, args.record_limit))
     for result in results:
         print(result)
 
