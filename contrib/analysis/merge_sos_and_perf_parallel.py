@@ -166,14 +166,14 @@ def merge_data(month1: str, month2: str, es : Elasticsearch, record_limit : int,
     # month1_data.print_json()
     # print(month1_data.__dict__)
 
-def args_generator(months, es, record_limit):
+def args_generator(months, es, record_limit, incoming_url, session):
     args_to_pass = []
     for month in months:
         run_index = f"dsa-pbench.v4.run.{month}"
         result_index = f"dsa-pbench.v4.result-data.{month}-*"
         run_docs = [run for run in es_data_gen(es, run_index, "pbench-run")]
         result_docs = [result for result in es_data_gen(es, result_index, "pbench-result-data-sample")]
-        args_to_pass.append((run_docs, result_docs, record_limit))
+        args_to_pass.append((run_docs, result_docs, record_limit, incoming_url, session))
     return args_to_pass
         
 
@@ -221,7 +221,7 @@ def main(args):
     # ["2021-07", "2021-08"]
     # [month for month in _month_gen(now)]
     months = ["2021-07", "2021-08", "2021-09", "2021-10", "2021-11", "2021-12", "2022-01", "2022-02", "2022-03", "2022-04"]
-    args_to_pass = args_generator(months, es, args.record_limit)
+    args_to_pass = args_generator(months, es, args.record_limit, incoming_url, session)
     scan_middle = time.time()
     args_time = scan_middle - scan_start
     print(f"args generation took: {args_time:0.2f} seconds", flush=True)
