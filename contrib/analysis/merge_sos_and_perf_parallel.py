@@ -162,6 +162,17 @@ def merge_data(month1: str, month2: str, es : Elasticsearch, record_limit : int,
     month1_data.print_json()
     # print(month1_data.__dict__)
 
+def args_generator(months, es, record_limit):
+    args_to_pass = []
+    for month in months:
+        run_index = f"dsa-pbench.v4.run.{month}"
+        result_index = f"dsa-pbench.v4.result-data.{month}-*"
+        run_docs = [run for run in es_data_gen(es, run_index, "pbench-run")]
+        result_docs = [result for result in es_data_gen(es, result_index, "pbench-result-data-sample")]
+        args_to_pass.append((run_docs, result_docs, record_limit))
+    return args_to_pass
+        
+
 def main(args):
 
     # URL prefix to fetch unpacked data
@@ -196,10 +207,15 @@ def main(args):
 
     # Non-serializable version try:
 
-    results = pool.starmap(merge_non_serializable, 
-        [([item for item in es_data_gen(es, f"dsa-pbench.v4.run.{month}", "pbench-run")],
-           [item for item in es_data_gen(es, f"dsa-pbench.v4.result-data.{month}-*", "pbench-result-data-sample")],
-           args.record_limit) for month in _month_gen(now)])
+    # results = pool.starmap(merge_non_serializable, 
+    #     [([item for item in es_data_gen(es, f"dsa-pbench.v4.run.{month}", "pbench-run")],
+    #        [item for item in es_data_gen(es, f"dsa-pbench.v4.result-data.{month}-*", "pbench-result-data-sample")],
+    #        args.record_limit) for month in _month_gen(now)])
+
+    # Non serializable try with 2 months:
+
+    results = pool.starmap(merge_non_serializable, args_generator(["2021-07", "2021-08"], es, args.record_limit))
+
 
     # forcing serializing and deseralizing of object which will probably take a lot of time.
     # seems unnecessary so I want to find a better way
