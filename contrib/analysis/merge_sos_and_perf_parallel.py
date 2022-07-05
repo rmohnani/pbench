@@ -189,7 +189,7 @@ def main(args):
     session = requests.Session()
     ua = session.headers["User-Agent"]
     session.headers.update({"User-Agent": f"{ua} -- merge_sos_and_perf_parallel"})
-    pbench_data = PbenchCombinedDataCollection(incoming_url, session, es)
+    # pbench_data = PbenchCombinedDataCollection(incoming_url, session, es)
 
     scan_start = time.time()
     now = datetime.utcfromtimestamp(scan_start)
@@ -223,7 +223,7 @@ def main(args):
         #     if len(pbench_data.run_id_to_data_valid) >= args.record_limit:
         #         break
 
-    merge_data("2021-07", "2021-08", es, args.record_limit, incoming_url, session)
+    # merge_data("2021-07", "2021-08", es, args.record_limit, incoming_url, session)
 
     # Parallel mergin
 
