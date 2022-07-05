@@ -544,7 +544,7 @@ class PbenchCombinedDataCollection:
                 RunNotInDataResultCheck(self.run_id_to_data_valid),
                 ClientHostAggregateResultCheck(),
             ],
-            # "fio_extraction": [FioExtractionCheck(self.session)],
+            "fio_extraction": [FioExtractionCheck(self.session)],
             "client_side": [ClientNamesCheck()],
         }
         self.trackers_initialization()
