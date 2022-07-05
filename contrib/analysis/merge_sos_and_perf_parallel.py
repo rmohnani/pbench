@@ -80,9 +80,9 @@ def merge_run_result_index(
     for result_doc in es_data_gen(es, result_index, "pbench-result-data-sample"):
         pbench_data.add_result(result_doc)
 
-def merge_run_result_mp(month: str, record_limit: int):
+def merge_run_result_mp(es: Elasticsearch, month: str, record_limit: int, incoming_url : str, session : requests.Session):
 
-    pbench_data = PbenchCombinedDataCollection()
+    pbench_data = PbenchCombinedDataCollection(incoming_url, session, es)
 
     run_index = f"dsa-pbench.v4.run.{month}"
     result_index = f"dsa-pbench.v4.result-data.{month}-*"
@@ -97,6 +97,21 @@ def merge_run_result_mp(month: str, record_limit: int):
         pbench_data.add_result(result_doc)
     
     # return json.dumps(pbench_data.to_json(), cls=ComplexEncoder)
+    return None
+
+def merge_non_serializable(run_doc_generator, result_doc_generator, record_limit):
+
+    pbench_data = PbenchCombinedDataCollection()
+
+    for run_doc in run_doc_generator:
+        pbench_data.add_run(run_doc)
+        if record_limit != -1:
+            if pbench_data.trackers["run"]["valid"] >= record_limit:
+                break
+    
+    for result_doc in result_doc_generator:
+        pbench_data.add_result(result_doc)
+    
     return pbench_data
 
 
@@ -174,16 +189,23 @@ def main(args):
     session = requests.Session()
     ua = session.headers["User-Agent"]
     session.headers.update({"User-Agent": f"{ua} -- merge_sos_and_perf_parallel"})
-    pbench_data = PbenchCombinedDataCollection()
+    pbench_data = PbenchCombinedDataCollection(incoming_url, session, es)
 
     scan_start = time.time()
     now = datetime.utcfromtimestamp(scan_start)
+
+    # Non-serializable version try:
+
+    results = pool.starmap(merge_non_serializable, 
+        [(es_data_gen(es, f"dsa-pbench.v4.run.{month}", "pbench-run"),
+           es_data_gen(es, f"dsa-pbench.v4.result-data.{month}-*", "pbench-result-data-sample"),
+           args.record_limit) for month in _month_gen(now)])
 
     # forcing serializing and deseralizing of object which will probably take a lot of time.
     # seems unnecessary so I want to find a better way
     # THis broken can't return object from function, need to return string or int. So ideally dump object into json
     # string format and load it in afterwards. 
-    results = pool.starmap(merge_run_result_mp, [(month, args.record_limit) for month in _month_gen(now)])
+    # results = pool.starmap(merge_run_result_mp, [(es, month, args.record_limit, incoming_url, session) for month in _month_gen(now)])
     # for result in results:
     #     result.print_stats()
     #     pbench_data.combine_data(result)
@@ -201,7 +223,7 @@ def main(args):
         #     if len(pbench_data.run_id_to_data_valid) >= args.record_limit:
         #         break
 
-    # merge_data("2021-07", "2021-08", es, args.record_limit, incoming_url, session)
+    merge_data("2021-07", "2021-08", es, args.record_limit, incoming_url, session)
 
     # Parallel mergin
 
