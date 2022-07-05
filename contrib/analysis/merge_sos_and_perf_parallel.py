@@ -216,9 +216,10 @@ def main(args):
 
     # ["2021-07", "2021-08"]
     # [month for month in _month_gen(now)]
-    # results = pool.starmap(merge_non_serializable, args_generator(["2021-07", "2021-08", "2021-09", "2021-10"], es, args.record_limit))
-    # for result in results:
-    #     print(result)
+    months = ["2021-07", "2021-08", "2021-09", "2021-10", "2021-11", "2021-12", "2022-01", "2022-02"]
+    results = pool.starmap(merge_non_serializable, args_generator(months, es, args.record_limit))
+    for result in results:
+        print(result)
 
 
     # forcing serializing and deseralizing of object which will probably take a lot of time.
@@ -243,8 +244,8 @@ def main(args):
         #     if len(pbench_data.run_id_to_data_valid) >= args.record_limit:
         #         break
 
-    merge_data("2021-07", "2021-08", es, args.record_limit, incoming_url, session)
-    merge_data("2021-09", "2021-10", es, args.record_limit, incoming_url, session)
+    # merge_data("2021-07", "2021-08", es, args.record_limit, incoming_url, session)
+    # merge_data("2021-09", "2021-10", es, args.record_limit, incoming_url, session)
 
     # Parallel mergin
 
