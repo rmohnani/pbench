@@ -504,7 +504,7 @@ class PbenchCombinedDataCollection:
 
     """
 
-    def __init__(self) -> None:
+    def __init__(self, incoming_url, session) -> None:
         """This initializes all the class attributes specified above
 
         Creates all other attributes, but stores the parameters
@@ -527,8 +527,8 @@ class PbenchCombinedDataCollection:
         # implementation for now
         self.results_seen = dict()
         # self.es = es
-        # self.incoming_url = incoming_url
-        # self.session = session
+        self.incoming_url = incoming_url
+        self.session = session
         self.trackers = {
             "run": dict(),
             "result": dict(),
@@ -755,12 +755,12 @@ class PbenchCombinedDataCollection:
             associated_run_id = doc["_source"]["run"]["id"]
             associated_run = self.run_id_to_data_valid[associated_run_id]
             associated_run.add_result_data(doc, result_diagnostic_return)
-            # associated_run.add_host_and_disk_names(
-            #     self.diskhost_map, self.incoming_url, self.session
-            # )
-            # self.update_diagnostic_trackers(
-            #     associated_run.data["diagnostics"]["fio_extraction"], "fio_extraction"
-            # )
+            associated_run.add_host_and_disk_names(
+                self.diskhost_map, self.incoming_url, self.session
+            )
+            self.update_diagnostic_trackers(
+                associated_run.data["diagnostics"]["fio_extraction"], "fio_extraction"
+            )
             # associated_run.add_client_names(self.clientnames_map, self.es)
             # self.update_diagnostic_trackers(
             #     associated_run.data["diagnostics"]["client_side"], "client_side"
