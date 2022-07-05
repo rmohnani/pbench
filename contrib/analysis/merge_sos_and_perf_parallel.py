@@ -99,11 +99,11 @@ def merge_run_result_mp(es: Elasticsearch, month: str, record_limit: int, incomi
     # return json.dumps(pbench_data.to_json(), cls=ComplexEncoder)
     return None
 
-def merge_non_serializable(run_doc_generator, result_doc_generator, record_limit):
+def merge_non_serializable(run_doc_generator, result_doc_generator, record_limit, incoming_url, session):
 
     print("Started 1 month...", flush=True)
 
-    pbench_data = PbenchCombinedDataCollection()
+    pbench_data = PbenchCombinedDataCollection(incoming_url, session)
 
     for run_doc in run_doc_generator:
         pbench_data.add_run(run_doc)
