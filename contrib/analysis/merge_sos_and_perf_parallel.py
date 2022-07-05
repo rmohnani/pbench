@@ -197,8 +197,8 @@ def main(args):
     # Non-serializable version try:
 
     results = pool.starmap(merge_non_serializable, 
-        [(es_data_gen(es, f"dsa-pbench.v4.run.{month}", "pbench-run"),
-           es_data_gen(es, f"dsa-pbench.v4.result-data.{month}-*", "pbench-result-data-sample"),
+        [([item for item in es_data_gen(es, f"dsa-pbench.v4.run.{month}", "pbench-run")],
+           [item for item in es_data_gen(es, f"dsa-pbench.v4.result-data.{month}-*", "pbench-result-data-sample")],
            args.record_limit) for month in _month_gen(now)])
 
     # forcing serializing and deseralizing of object which will probably take a lot of time.
