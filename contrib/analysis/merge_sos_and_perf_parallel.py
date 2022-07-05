@@ -245,6 +245,8 @@ def main(args):
 
     merge_data("2021-07", "2021-08", es, args.record_limit, incoming_url, session)
     merge_data("2021-09", "2021-10", es, args.record_limit, incoming_url, session)
+    merge_data("2021-11", "2021-12", es, args.record_limit, incoming_url, session)
+    merge_data("2022-01", "2022-02", es, args.record_limit, incoming_url, session)
 
     # Parallel mergin
 
