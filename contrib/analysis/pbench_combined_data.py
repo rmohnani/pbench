@@ -545,6 +545,7 @@ class PbenchCombinedDataCollection:
         self.record_limit = record_limit
         ncpus = multiprocessing.cpu_count() - 1 if cpu_n == 0 else cpu_n
         self.pool = multiprocessing.Pool(ncpus) if ncpus != 1 else None
+        self.pool_results = []
 
     def __str__(self) -> str:
         """Specifies how to print object
@@ -843,10 +844,11 @@ class PbenchCombinedDataCollection:
         ):
             self.add_result(result_doc)
         print("finishing month...")
+        return None
     
 
     def add_month(self, month : str):
-        self.pool.map(self.collect_data, (month))
+        self.pool_results.append(self.pool.map(self.collect_data, (month)))
 
 
 class DiagnosticCheck(ABC):
