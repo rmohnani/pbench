@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 from collections import defaultdict
 import os
+import multiprocessing
 
 from requests import Session
 from typing import Tuple
@@ -491,7 +492,7 @@ class PbenchCombinedDataCollection:
     """
 
     def __init__(
-        self, incoming_url: str, session: Session, es: Elasticsearch, record_limit: int
+        self, incoming_url: str, session: Session, es: Elasticsearch, record_limit: int, cpu_n : int
     ) -> None:
         """This initializes all the class attributes specified above
 
@@ -506,6 +507,8 @@ class PbenchCombinedDataCollection:
             A session to make request to url (used for fio extraction)
         es : Elasticsearch
             Elasticsearch object where data is stored (used for clientname extraction)
+        record_limit : int
+            Number of valid run records and associated result data to process
 
         """
 
@@ -540,6 +543,8 @@ class PbenchCombinedDataCollection:
         self.diskhost_map = dict()
         self.clientnames_map = dict()
         self.record_limit = record_limit
+        ncpus = multiprocessing.cpu_count() - 1 if cpu_n == 0 else cpu_n
+        self.pool = multiprocessing.Pool(ncpus) if ncpus != 1 else None
 
     def __str__(self) -> str:
         """Specifies how to print object
@@ -823,6 +828,7 @@ class PbenchCombinedDataCollection:
         None
 
         """
+        print("starting month...")
         run_index = f"dsa-pbench.v4.run.{month}"
         result_index = f"dsa-pbench.v4.result-data.{month}-*"
 
@@ -836,6 +842,11 @@ class PbenchCombinedDataCollection:
             self.es, result_index, "pbench-result-data-sample"
         ):
             self.add_result(result_doc)
+        print("finishing month...")
+    
+
+    def add_month(self, month : str):
+        self.pool.map(self.collect_data, (month))
 
 
 class DiagnosticCheck(ABC):

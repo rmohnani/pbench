@@ -52,7 +52,7 @@ def main(args):
     ua = session.headers["User-Agent"]
     session.headers.update({"User-Agent": f"{ua} -- merge_sos_and_perf_parallel"})
     pbench_data = PbenchCombinedDataCollection(
-        incoming_url, session, es, args.record_limit
+        incoming_url, session, es, args.record_limit, args.cpu_n
     )
 
     scan_start = time.time()
@@ -62,7 +62,7 @@ def main(args):
     # pool.starmap(merge_run_result_index, [(es, month, args.record_limit, pbench_data) for month in _month_gen(now)])
 
     for month in _month_gen(now):
-        pbench_data.collect_data(month)
+        pbench_data.add_month(month)
 
     # NOTE: Not writing sosreports and results to files. Will work on this step
     #       of sosreport processing, etc next.
