@@ -101,6 +101,8 @@ def merge_run_result_mp(es: Elasticsearch, month: str, record_limit: int, incomi
 
 def merge_non_serializable(run_doc_generator, result_doc_generator, record_limit):
 
+    print("Started 1 month...")
+
     pbench_data = PbenchCombinedDataCollection()
 
     for run_doc in run_doc_generator:
@@ -111,6 +113,8 @@ def merge_non_serializable(run_doc_generator, result_doc_generator, record_limit
     
     for result_doc in result_doc_generator:
         pbench_data.add_result(result_doc)
+    
+    print("Finished 1 month...")
     
     return pbench_data
 
