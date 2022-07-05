@@ -152,14 +152,14 @@ def merge_data(month1: str, month2: str, es : Elasticsearch, record_limit : int,
     month2_data = PbenchCombinedDataCollection(incoming_url, session, es)
     merge_run_result_index(es, month1, record_limit, month1_data)
     merge_run_result_index(es, month2, record_limit, month2_data)
-    # print(month1_data)
-    # print(month2_data)
-    month1_data.print_stats()
-    month2_data.print_stats()
+    print(month1_data)
+    print(month2_data)
+    # month1_data.print_stats()
+    # month2_data.print_stats()
     month1_data.combine_data(month2_data)
-    # print(month1_data)
-    month1_data.print_stats()
-    month1_data.print_json()
+    print(month1_data)
+    # month1_data.print_stats()
+    # month1_data.print_json()
     # print(month1_data.__dict__)
 
 def args_generator(months, es, record_limit):
@@ -216,9 +216,9 @@ def main(args):
 
     # ["2021-07", "2021-08"]
     # [month for month in _month_gen(now)]
-    results = pool.starmap(merge_non_serializable, args_generator(["2021-07", "2021-08", "2021-09", "2021-10"], es, args.record_limit))
-    for result in results:
-        print(result)
+    # results = pool.starmap(merge_non_serializable, args_generator(["2021-07", "2021-08", "2021-09", "2021-10"], es, args.record_limit))
+    # for result in results:
+    #     print(result)
 
 
     # forcing serializing and deseralizing of object which will probably take a lot of time.
@@ -243,7 +243,8 @@ def main(args):
         #     if len(pbench_data.run_id_to_data_valid) >= args.record_limit:
         #         break
 
-    # merge_data("2021-07", "2021-08", es, args.record_limit, incoming_url, session)
+    merge_data("2021-07", "2021-08", es, args.record_limit, incoming_url, session)
+    merge_data("2021-09", "2021-10", es, args.record_limit, incoming_url, session)
 
     # Parallel mergin
 
