@@ -225,7 +225,7 @@ def main(args):
     scan_middle = time.time()
     args_time = scan_middle - scan_start
     print(f"args generation took: {args_time:0.2f} seconds", flush=True)
-    results = pool.starmap(merge_non_serializable, args_to_pass)
+    results = pool.starmap_async(merge_non_serializable, args_to_pass)
     pool.close()
     pool.join()
     for result in results.get():
