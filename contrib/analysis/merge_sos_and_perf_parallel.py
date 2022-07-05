@@ -215,6 +215,8 @@ def main(args):
     # Non serializable try with 2 months:
 
     results = pool.starmap(merge_non_serializable, args_generator(["2021-07", "2021-08"], es, args.record_limit))
+    for result in results:
+        print(result)
 
 
     # forcing serializing and deseralizing of object which will probably take a lot of time.
