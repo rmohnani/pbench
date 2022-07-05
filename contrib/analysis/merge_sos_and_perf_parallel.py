@@ -221,8 +221,12 @@ def main(args):
     # ["2021-07", "2021-08"]
     # [month for month in _month_gen(now)]
     months = ["2021-07", "2021-08", "2021-09", "2021-10", "2021-11", "2021-12", "2022-01", "2022-02", "2022-03", "2022-04"]
-    results = pool.starmap(merge_non_serializable, args_generator(months, es, args.record_limit))
-    for result in results:
+    args_to_pass = args_generator(months, es, args.record_limit)
+    scan_middle = time.time()
+    args_time = scan_middle - scan_start
+    print("args generation took: {args_time:0.2f} seconds", flush=True)
+    results = pool.starmap_async(merge_non_serializable, args_to_pass)
+    for result in results.get():
         print(result)
 
 
@@ -274,7 +278,7 @@ def main(args):
     #         outfile.flush()
 
     scan_end = time.time()
-    duration = scan_end - scan_start
+    duration = scan_end - scan_middle
 
     # pbench_data.print_stats()
     print(f"--- merging run and result data took {duration:0.2f} seconds", flush=True)
