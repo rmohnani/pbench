@@ -148,8 +148,8 @@ def es_data_gen(es: Elasticsearch, index: str, doc_type: str):
 
 
 def merge_data(month1: str, month2: str, es : Elasticsearch, record_limit : int, incoming_url : str, session : requests.Session):
-    month1_data = PbenchCombinedDataCollection(incoming_url, session, es)
-    month2_data = PbenchCombinedDataCollection(incoming_url, session, es)
+    month1_data = PbenchCombinedDataCollection()
+    month2_data = PbenchCombinedDataCollection()
     merge_run_result_index(es, month1, record_limit, month1_data)
     merge_run_result_index(es, month2, record_limit, month2_data)
     print(month1_data)
