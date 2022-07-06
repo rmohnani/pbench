@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 from collections import defaultdict
 import os
 import multiprocessing
-import pathos.multiprocessing as mp
+from pathos.pools import ProcessPool
 
 from requests import Session
 from typing import Tuple
@@ -545,7 +545,7 @@ class PbenchCombinedDataCollection:
         self.clientnames_map = dict()
         self.record_limit = record_limit
         ncpus = multiprocessing.cpu_count() - 1 if cpu_n == 0 else cpu_n
-        self.pool = mp.ProcessPool(ncpus) if ncpus != 1 else None
+        self.pool = ProcessPool(ncpus) if ncpus != 1 else None
         self.pool_results = []
 
     def __str__(self) -> str:
@@ -853,10 +853,12 @@ class PbenchCombinedDataCollection:
         self.pool_results.append(self.pool.amap(self.collect_data, [month]))
     
     def add_months(self, months : list[str]):
+        self.pool.restart(True)
         self.pool_results.extend(self.pool.map(self.collect_data, months))
         for result in self.pool_results:
             self.combine_data(result)
         self.pool_results = []
+        self.pool.close()
     
     def merge_dicts(self, dicts):
         ret = defaultdict(int)
