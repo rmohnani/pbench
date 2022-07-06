@@ -54,7 +54,7 @@ def main(args):
     pbench_data = PbenchCombinedDataCollection(
         incoming_url, session, es, args.record_limit, args.cpu_n
     )
-
+    print(pbench_data.__dict__)
     scan_start = time.time()
     now = datetime.utcfromtimestamp(scan_start)
 
