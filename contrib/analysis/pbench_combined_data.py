@@ -844,9 +844,9 @@ class PbenchCombinedDataCollection:
             self.es, result_index, "pbench-result-data-sample"
         ):
             self.add_result(result_doc)
+        print(f"finishing {month}...")
         print(self.trackers)
-        print("finishing month...")
-        return None
+        return self
     
 
     def add_month(self, month : str):
@@ -854,6 +854,8 @@ class PbenchCombinedDataCollection:
     
     def add_months(self, months : list[str]):
         self.pool_results.extend(self.pool.map(self.collect_data, months))
+        for result in self.pool_results:
+            print(type(result))
         
 
 
