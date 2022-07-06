@@ -61,8 +61,9 @@ def main(args):
     # TODO: This doesn't work because es instance not pickle-able.
     # pool.starmap(merge_run_result_index, [(es, month, args.record_limit, pbench_data) for month in _month_gen(now)])
 
-    for month in _month_gen(now):
-        pbench_data.add_month(month)
+    # for month in _month_gen(now):
+    #     pbench_data.add_month(month)
+    pbench_data.add_months(_month_gen(now))
 
     # NOTE: Not writing sosreports and results to files. Will work on this step
     #       of sosreport processing, etc next.

@@ -850,6 +850,10 @@ class PbenchCombinedDataCollection:
 
     def add_month(self, month : str):
         self.pool_results.append(self.pool.amap(self.collect_data, [month]))
+    
+    def add_months(self, months : list[str]):
+        self.pool_results.extend(self.pool.map(self.collect_data, months))
+        
 
 
 class DiagnosticCheck(ABC):
