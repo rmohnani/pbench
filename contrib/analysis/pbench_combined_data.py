@@ -568,7 +568,7 @@ class PbenchCombinedDataCollection:
             # "Diagnostic Checks Used: \n" + str(self.diagnostic_checks) + "\n" +
             + "Trackers: \n"
             + str(self.trackers)
-            + "---------------\n"
+            + "\n---------------\n"
         )
 
     def trackers_initialization(self) -> None:
@@ -874,7 +874,9 @@ class PbenchCombinedDataCollection:
         self.results_seen.update(other.results_seen)
         for type in self.trackers:
             self.trackers[type] = self.merge_dicts([self.trackers[type], other.trackers[type]])
-        self.result_temp_id = other.result_temp_id
+        self.result_temp_id = other.result_temp_id # this is an issue becuase if parallel different processes will use same id
+        # can also do this in parallel since they both just require run and result data can maybe do an async call on them
+        # for more parallelism
         self.diskhost_map.update(other.diskhost_map)
         self.clientnames_map.update(other.clientnames_map)
         
