@@ -739,10 +739,10 @@ class PbenchCombinedDataCollection:
             self.update_diagnostic_trackers(
                 associated_run.data["diagnostics"]["fio_extraction"], "fio_extraction"
             )
-            # associated_run.add_client_names(self.clientnames_map, self.es)
-            # self.update_diagnostic_trackers(
-            #     associated_run.data["diagnostics"]["client_side"], "client_side"
-            # )
+            associated_run.add_client_names(self.clientnames_map, self.es)
+            self.update_diagnostic_trackers(
+                associated_run.data["diagnostics"]["client_side"], "client_side"
+            )
             # NOTE: though host and disk names may be marked invalid, a valid output
             #       is always given in those cases, so we will effectively always have
             #       valid hostdisk names. However client_names marked as invalid will
@@ -855,7 +855,26 @@ class PbenchCombinedDataCollection:
     def add_months(self, months : list[str]):
         self.pool_results.extend(self.pool.map(self.collect_data, months))
         for result in self.pool_results:
-            print(type(result))
+            self.combine_data(result)
+        self.pool_results = []
+    
+    def merge_dicts(self, dicts):
+        ret = defaultdict(int)
+        for d in dicts:
+            for k, v in d.items():
+                ret[k] += v
+        return dict(ret)
+
+    def combine_data(self, other):
+        self.run_id_to_data_valid.update(other.run_id_to_data_valid)
+        for type in self.invalid:
+            self.invalid[type].update(other.invalid[type])
+        self.results_seen.update(other.results_seen)
+        for type in self.trackers:
+            self.trackers[type] = self.merge_dicts([self.trackers[type], other.trackers[type]])
+        self.result_temp_id = other.result_temp_id
+        self.diskhost_map.update(other.diskhost_map)
+        self.clientnames_map.update(other.clientnames_map)
         
 
 
