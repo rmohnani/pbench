@@ -739,10 +739,10 @@ class PbenchCombinedDataCollection:
             self.update_diagnostic_trackers(
                 associated_run.data["diagnostics"]["fio_extraction"], "fio_extraction"
             )
-            associated_run.add_client_names(self.clientnames_map, self.es)
-            self.update_diagnostic_trackers(
-                associated_run.data["diagnostics"]["client_side"], "client_side"
-            )
+            # associated_run.add_client_names(self.clientnames_map, self.es)
+            # self.update_diagnostic_trackers(
+            #     associated_run.data["diagnostics"]["client_side"], "client_side"
+            # )
             # NOTE: though host and disk names may be marked invalid, a valid output
             #       is always given in those cases, so we will effectively always have
             #       valid hostdisk names. However client_names marked as invalid will
