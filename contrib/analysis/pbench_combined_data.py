@@ -844,6 +844,7 @@ class PbenchCombinedDataCollection:
             self.es, result_index, "pbench-result-data-sample"
         ):
             self.add_result(result_doc)
+        print(self.trackers)
         print("finishing month...")
         return None
     
