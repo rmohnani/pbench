@@ -830,7 +830,7 @@ class PbenchCombinedDataCollection:
         None
 
         """
-        print("starting month...")
+        print(f"starting {month}...")
         run_index = f"dsa-pbench.v4.run.{month}"
         result_index = f"dsa-pbench.v4.result-data.{month}-*"
 
