@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 from collections import defaultdict
 import os
 import multiprocessing
+import pathos.multiprocessing as mp
 
 from requests import Session
 from typing import Tuple
@@ -544,7 +545,7 @@ class PbenchCombinedDataCollection:
         self.clientnames_map = dict()
         self.record_limit = record_limit
         ncpus = multiprocessing.cpu_count() - 1 if cpu_n == 0 else cpu_n
-        self.pool = multiprocessing.Pool(ncpus) if ncpus != 1 else None
+        self.pool = mp.ProcessPool(ncpus) if ncpus != 1 else None
         self.pool_results = []
 
     def __str__(self) -> str:
