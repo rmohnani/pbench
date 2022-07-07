@@ -1118,20 +1118,32 @@ class PbenchCombinedDataCollection:
             }
         }
 
+        
         run_valid_status = dict()
 
         for month in months:
             result_index = f"dsa-pbench.v4.result-data.{month}-*"
-            for doc in scan(
-                self.es,
-                query=query,
-                index=result_index,
-                doc_type="pbench-result-data-sample",
-                scroll="1d",
-                request_timeout=3600,  # to prevent timeout errors (3600 is arbitrary)
-            ):
-
-                yield doc
+            resp = self.es.search(index = result_index, body = query)
+            for run in resp["aggregations"]:
+                break_run = False
+                for iteration_name in run["buckets"]:
+                    for sample_name in iteration_name["buckets"]:
+                        for measurement_type in sample_name["buckets"]:
+                            for measurement_title in measurement_type["buckets"]:
+                                if len(measurement_title["buckets"]) > 2:
+                                    run_valid_status[run["key"]] = False
+                                    break_run = True
+                            if break_run is True:
+                                break
+                        if break_run is True:
+                            break
+                    if break_run is True:
+                        break
+                if break_run is False:
+                    run_valid_status[run["key"]] = True
+        
+        return run_valid_status
+                                    
 
 
 class DiagnosticCheck(ABC):
