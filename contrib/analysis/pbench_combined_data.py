@@ -1124,6 +1124,10 @@ class PbenchCombinedDataCollection:
         for month in months:
             result_index = f"dsa-pbench.v4.result-data.{month}-*"
             resp = self.es.search(index = result_index, body = query)
+            print("---------------\n")
+            print("\nRESPONSE:\n")
+            print(resp)
+            print("\n---------------\n")
             for run in resp["aggregations"]:
                 break_run = False
                 for iteration_name in run["buckets"]:
