@@ -1060,6 +1060,78 @@ class PbenchCombinedDataCollection:
         # for more parallelism
         self.diskhost_map.update(other.diskhost_map)
         self.clientnames_map.update(other.clientnames_map)
+    
+    def kibana_query_results_for_runs(self, months):
+
+        query = {
+            "size" : 0,
+            "query": {
+                "filtered": {
+                "query": {
+                    "query_string": {
+                    "query": "run.script:fio",
+                    }
+                },
+                }
+            },
+            "aggs": {
+                "2": {
+                "terms": {
+                    "field": "run.id",
+                },
+                "aggs": {
+                    "3": {
+                    "terms": {
+                        "field": "iteration.name",
+                    },
+                    "aggs": {
+                        "4": {
+                        "terms": {
+                            "field": "sample.name",
+                            }
+                        },
+                        "aggs": {
+                            "5": {
+                            "terms": {
+                                "field": "sample.measurement_type",
+                            },
+                            "aggs": {
+                                "6": {
+                                "terms": {
+                                    "field": "sample.measurement_title",
+                                },
+                                "aggs": {
+                                    "7": {
+                                    "terms": {
+                                        "field": "sample.measurement_idx",
+                                    }
+                                }
+                                }
+                            }
+                            }
+                        }
+                        }
+                    }
+                    }
+                }
+            }
+            }
+        }
+
+        run_valid_status = dict()
+
+        for month in months:
+            result_index = f"dsa-pbench.v4.result-data.{month}-*"
+            for doc in scan(
+                self.es,
+                query=query,
+                index=result_index,
+                doc_type="pbench-result-data-sample",
+                scroll="1d",
+                request_timeout=3600,  # to prevent timeout errors (3600 is arbitrary)
+            ):
+
+                yield doc
 
 
 class DiagnosticCheck(ABC):
