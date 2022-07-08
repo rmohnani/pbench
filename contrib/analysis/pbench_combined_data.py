@@ -1084,11 +1084,11 @@ class PbenchCombinedDataCollection:
                 # print(run)
                 # break
                 break_run = False
-                for iteration_name in run["buckets"]:
-                    for sample_name in iteration_name["buckets"]:
-                        for measurement_type in sample_name["buckets"]:
-                            for measurement_title in measurement_type["buckets"]:
-                                if len(measurement_title["buckets"]) > 2:
+                for iteration_name in run["3"]["buckets"]:
+                    for sample_name in iteration_name["4"]["buckets"]:
+                        for measurement_type in sample_name["5"]["buckets"]:
+                            for measurement_title in measurement_type["6"]["buckets"]:
+                                if len(measurement_title["7"]["buckets"]) > 2:
                                     run_valid_status[run["key"]] = False
                                     break_run = True
                             if break_run is True:
