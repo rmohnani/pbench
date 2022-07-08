@@ -1180,7 +1180,7 @@ class PrelimCheck1(DiagnosticCheck):
         """
         self.run_id_valid_status = dict()
         self.es = es
-        self.query = {"query":{"filtered":{"query":{"query_string":{"query":"run.script:fio","analyze_wildcard":True}}}},"size":0,"aggs":{"2":{"terms":{"field":"run.id","size":0},"aggs":{"3":{"terms":{"field":"iteration.name","size":0},"aggs":{"4":{"terms":{"field":"sample.name","size":0},"aggs":{"5":{"terms":{"field":"sample.measurement_type","size":0},"aggs":{"6":{"terms":{"field":"sample.measurement_title","size":0},"aggs":{"7":{"terms":{"field":"sample.measurement_idx","size":0}}}}}}}}}}}}}}
+        self.query = {"query":{"filtered":{"query":{"query_string":{"query":"run.script:fio","analyze_wildcard":True}}}},"size":0,"aggs":{"2":{"terms":{"field":"run.id","size":0},"aggs":{"3":{"terms":{"field":"iteration.name","size":0},"aggs":{"4":{"terms":{"field":"sample.name","size":0},"aggs":{"5":{"terms":{"field":"sample.measurement_type","size":0},"aggs":{"6":{"terms":{"field":"sample.measurement_title","size":0},"aggs":{"7":{"terms":{"field":"sample.measurement_idx","size":1000}}}}}}}}}}}}}}
 
     
     def add_month(self, month):
@@ -1202,7 +1202,7 @@ class PrelimCheck1(DiagnosticCheck):
                 for sample_name in iteration_name["4"]["buckets"]:
                     for measurement_type in sample_name["5"]["buckets"]:
                         for measurement_title in measurement_type["6"]["buckets"]:
-                            print(measurement_title)
+                            print(measurement_title["7"["buckets"]])
                             print("---------\n")
                             sys.exit(1)
                             for measurement_idx in measurement_title["7"]["buckets"]:
