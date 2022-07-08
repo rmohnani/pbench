@@ -1077,7 +1077,10 @@ class PbenchCombinedDataCollection:
             print("\nRESPONSE:\n")
             print(json.dumps(resp))
             print("\n---------------\n")
-            for run in resp["aggregations"]:
+            for run in resp["aggregations"][2]["buckets"]:
+                print("run:\n")
+                print(run)
+                print("\n")
                 # print(run)
                 # break
                 break_run = False
