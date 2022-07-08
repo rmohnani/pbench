@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 from collections import defaultdict
 import os
 import pandas
+import json
 from pathos.pools import ProcessPool
 from pathos.helpers import cpu_count
 
@@ -1074,9 +1075,11 @@ class PbenchCombinedDataCollection:
             resp = self.es.search(index = result_index, body = query2)
             print("---------------\n")
             print("\nRESPONSE:\n")
-            print(resp)
+            print(json.dumps(resp))
             print("\n---------------\n")
             for run in resp["aggregations"]:
+                print(run)
+                break
                 break_run = False
                 for iteration_name in run["buckets"]:
                     for sample_name in iteration_name["buckets"]:
