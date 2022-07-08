@@ -97,12 +97,14 @@ def main(parser: argparse.ArgumentParser) -> None:
     res = dict()
 
     for month in _month_gen(end_time, args.start_months_prior):
-        print(month + "\n")
+        # print(month + "\n")
         val = pbench_data.kibana_query_results_for_runs([month])
         res.update(val)
-        print(val, len(val))
+        # print(val, len(val))
 
+    print(sum(x == True for x in res.values()))
     print(len(res))
+    
 
     scan_end = time.time()
     duration = scan_end - scan_start
