@@ -3,6 +3,7 @@ from collections import defaultdict
 import os
 import pandas
 import json
+import sys
 from pathos.pools import ProcessPool
 from pathos.helpers import cpu_count
 
@@ -1183,7 +1184,7 @@ class PrelimCheck1(DiagnosticCheck):
 
     
     def add_month(self, month):
-        result_index = f"dsa-pbench.v4.result-data.{month}-*"
+        result_index = f"dsa-pbench.v4.run.{month}-*"
         resp = self.es.search(index = result_index, body = self.query)
         # print("---------------\n")
         # print("\nRESPONSE:\n")
@@ -1196,12 +1197,15 @@ class PrelimCheck1(DiagnosticCheck):
             # print(run)
             # break
             break_run = False
+            # TODO: Factor into routine that takes in run, returns False at 1205 otherwise returns true
             for iteration_name in run["3"]["buckets"]:
                 for sample_name in iteration_name["4"]["buckets"]:
                     for measurement_type in sample_name["5"]["buckets"]:
                         for measurement_title in measurement_type["6"]["buckets"]:
                             if len(measurement_title["7"]["buckets"]) > 2:
                                 self.run_id_valid_status[run["key"]] = False
+                                print(measurement_title["7"]["buckets"])
+                                
                                 break_run = True
                         if break_run is True:
                             break
@@ -1211,6 +1215,7 @@ class PrelimCheck1(DiagnosticCheck):
                     break
             if break_run is False:
                 self.run_id_valid_status[run["key"]] = True
+            sys.exit(1)
 
     @property
     def diagnostic_names(self):
