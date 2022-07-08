@@ -1064,7 +1064,7 @@ class PbenchCombinedDataCollection:
     
     def kibana_query_results_for_runs(self, months):
 
-        query2 = {"query":{"filtered":{"query":{"query_string":{"analyze_wildcard":True,"query":"run.script:fio"}}}},"size":0,"aggs":{"2":{"terms":{"field":"run.id"},"aggs":{"3":{"terms":{"field":"iteration.name"},"aggs":{"4":{"terms":{"field":"sample.name"},"aggs":{"5":{"terms":{"field":"sample.measurement_type"},"aggs":{"6":{"terms":{"field":"sample.measurement_title"},"aggs":{"7":{"terms":{"field":"sample.measurement_idx"}}}}}}}}}}}}}}
+        query2 = {"query":{"filtered":{"query":{"query_string":{"query":"run.script:fio","analyze_wildcard":True}}}},"size":0,"aggs":{"2":{"terms":{"field":"run.id","size":0},"aggs":{"3":{"terms":{"field":"iteration.name","size":0},"aggs":{"4":{"terms":{"field":"sample.name","size":0},"aggs":{"5":{"terms":{"field":"sample.measurement_type","size":0},"aggs":{"6":{"terms":{"field":"sample.measurement_title","size":0},"aggs":{"7":{"terms":{"field":"sample.measurement_idx","size":0}}}}}}}}}}}}}}
         
         run_valid_status = dict()
 
