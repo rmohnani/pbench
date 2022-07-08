@@ -1065,7 +1065,7 @@ class PbenchCombinedDataCollection:
 
         query = {"size":0,"query":{"filtered":{"query":{"query_string":{"query":"run.script:fio"}}}},"aggs":{"2":{"terms":{"field":"run.id"},"aggs":{"3":{"terms":{"field":"iteration.name"},"aggs":{"4":{"terms":{"field":"sample.name"}},"aggs":{"5":{"terms":{"field":"sample.measurement_type"},"aggs":{"6":{"terms":{"field":"sample.measurement_title"},"aggs":{"7":{"terms":{"field":"sample.measurement_idx"}}}}}}}}}}}}}
 
-        query2 = {"query":{"filtered":{"query":{"query_string":{"analyze_wildcard":true,"query":"run.script:fio"}}}},"size":0,"aggs":{"2":{"terms":{"field":"run.id"},"aggs":{"3":{"terms":{"field":"iteration.name"},"aggs":{"4":{"terms":{"field":"sample.name"},"aggs":{"5":{"terms":{"field":"sample.measurement_type"},"aggs":{"6":{"terms":{"field":"sample.measurement_title"},"aggs":{"7":{"terms":{"field":"sample.measurement_idx"}}}}}}}}}}}}}}
+        query2 = {"query":{"filtered":{"query":{"query_string":{"analyze_wildcard":True,"query":"run.script:fio"}}}},"size":0,"aggs":{"2":{"terms":{"field":"run.id"},"aggs":{"3":{"terms":{"field":"iteration.name"},"aggs":{"4":{"terms":{"field":"sample.name"},"aggs":{"5":{"terms":{"field":"sample.measurement_type"},"aggs":{"6":{"terms":{"field":"sample.measurement_title"},"aggs":{"7":{"terms":{"field":"sample.measurement_idx"}}}}}}}}}}}}}}
         
         run_valid_status = dict()
 
