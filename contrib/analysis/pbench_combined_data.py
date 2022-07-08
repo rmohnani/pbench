@@ -1064,8 +1064,6 @@ class PbenchCombinedDataCollection:
     
     def kibana_query_results_for_runs(self, months):
 
-        query = {"size":0,"query":{"filtered":{"query":{"query_string":{"query":"run.script:fio"}}}},"aggs":{"2":{"terms":{"field":"run.id"},"aggs":{"3":{"terms":{"field":"iteration.name"},"aggs":{"4":{"terms":{"field":"sample.name"}},"aggs":{"5":{"terms":{"field":"sample.measurement_type"},"aggs":{"6":{"terms":{"field":"sample.measurement_title"},"aggs":{"7":{"terms":{"field":"sample.measurement_idx"}}}}}}}}}}}}}
-
         query2 = {"query":{"filtered":{"query":{"query_string":{"analyze_wildcard":True,"query":"run.script:fio"}}}},"size":0,"aggs":{"2":{"terms":{"field":"run.id"},"aggs":{"3":{"terms":{"field":"iteration.name"},"aggs":{"4":{"terms":{"field":"sample.name"},"aggs":{"5":{"terms":{"field":"sample.measurement_type"},"aggs":{"6":{"terms":{"field":"sample.measurement_title"},"aggs":{"7":{"terms":{"field":"sample.measurement_idx"}}}}}}}}}}}}}}
         
         run_valid_status = dict()
@@ -1073,14 +1071,14 @@ class PbenchCombinedDataCollection:
         for month in months:
             result_index = f"dsa-pbench.v4.result-data.{month}-*"
             resp = self.es.search(index = result_index, body = query2)
-            print("---------------\n")
-            print("\nRESPONSE:\n")
-            print(json.dumps(resp))
-            print("\n---------------\n")
+            # print("---------------\n")
+            # print("\nRESPONSE:\n")
+            # print(json.dumps(resp))
+            # print("\n---------------\n")
             for run in resp["aggregations"]["2"]["buckets"]:
-                print("run:\n")
-                print(run)
-                print("\n")
+                # print("run:\n")
+                # print(run)
+                # print("\n")
                 # print(run)
                 # break
                 break_run = False
