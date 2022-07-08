@@ -1184,7 +1184,7 @@ class PrelimCheck1(DiagnosticCheck):
 
     
     def add_month(self, month):
-        result_index = f"dsa-pbench.v4.run.{month}-*"
+        result_index = f"dsa-pbench.v4.result-data.{month}-*"
         resp = self.es.search(index = result_index, body = self.query)
         # print("---------------\n")
         # print("\nRESPONSE:\n")
