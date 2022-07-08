@@ -94,11 +94,15 @@ def main(parser: argparse.ArgumentParser) -> None:
     # pbench_data.wait_for_pool()
     # res = pbench_data.kibana_query_results_for_runs(_month_gen(end_time, args.start_months_prior))
     # print(res)
+    res = dict()
 
     for month in _month_gen(end_time, args.start_months_prior):
         print(month + "\n")
         val = pbench_data.kibana_query_results_for_runs([month])
+        res.update(val)
         print(val, len(val))
+
+    print(len(res))
 
     scan_end = time.time()
     duration = scan_end - scan_start
