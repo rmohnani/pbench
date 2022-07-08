@@ -1185,7 +1185,7 @@ class PrelimCheck1(DiagnosticCheck):
                 "filtered": {
                 "query": {
                     "query_string": {
-                    "analyze_wildcard": true,
+                    "analyze_wildcard": True,
                     "query": "run.script:fio"
                     }
                 }
