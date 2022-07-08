@@ -1180,7 +1180,67 @@ class PrelimCheck1(DiagnosticCheck):
         """
         self.run_id_valid_status = dict()
         self.es = es
-        self.query = {"query":{"filtered":{"query":{"query_string":{"query":"run.script:fio","analyze_wildcard":True}}}},"size":0,"aggs":{"2":{"terms":{"field":"run.id","size":0},"aggs":{"3":{"terms":{"field":"iteration.name","size":0},"aggs":{"4":{"terms":{"field":"sample.name","size":0},"aggs":{"5":{"terms":{"field":"sample.measurement_type","size":0},"aggs":{"6":{"terms":{"field":"sample.measurement_title","size":0},"aggs":{"7":{"terms":{"field":"sample.measurement_idx","size":1000}}}}}}}}}}}}}}
+        self.query = {
+            "query": {
+                "filtered": {
+                "query": {
+                    "query_string": {
+                    "analyze_wildcard": true,
+                    "query": "run.script:fio"
+                    }
+                }
+                }
+            },
+            "size": 0,
+            "aggs": {
+                "2": {
+                "terms": {
+                    "field": "run.id",
+                    "size": 0
+                },
+                "aggs": {
+                    "3": {
+                    "terms": {
+                        "field": "iteration.name",
+                        "size": 0
+                    },
+                    "aggs": {
+                        "4": {
+                        "terms": {
+                            "field": "sample.name",
+                            "size": 0
+                        },
+                        "aggs": {
+                            "5": {
+                            "terms": {
+                                "field": "sample.measurement_type",
+                                "size": 0
+                            },
+                            "aggs": {
+                                "6": {
+                                "terms": {
+                                    "field": "sample.measurement_title",
+                                    "size": 0
+                                },
+                                "aggs": {
+                                    "7": {
+                                    "terms": {
+                                        "field": "sample.measurement_idx",
+                                        "size": 0
+                                    }
+                                    }
+                                }
+                                }
+                            }
+                            }
+                        }
+                        }
+                    }
+                    }
+                }
+                }
+            }
+        }
 
     
     def add_month(self, month):
@@ -1191,6 +1251,8 @@ class PrelimCheck1(DiagnosticCheck):
         # print(json.dumps(resp))
         # print("\n---------------\n")
         for run in resp["aggregations"]["2"]["buckets"]:
+            # print(run)
+            print(run["key"])
             # print("run:\n")
             # print(run)
             # print("\n")
@@ -1199,10 +1261,13 @@ class PrelimCheck1(DiagnosticCheck):
             break_run = False
             # TODO: Factor into routine that takes in run, returns False at 1205 otherwise returns true
             for iteration_name in run["3"]["buckets"]:
+                print(iteration_name["key"])
                 for sample_name in iteration_name["4"]["buckets"]:
+                    print(sample_name["key"])
                     for measurement_type in sample_name["5"]["buckets"]:
+                        print(measurement_type["key"])
                         for measurement_title in measurement_type["6"]["buckets"]:
-                            print(measurement_title)
+                            print(measurement_title["key"])
                             if len(measurement_title["7"]["buckets"]) > 2:
                                 self.run_id_valid_status[run["key"]] = False
                                 print(measurement_title["7"]["buckets"])
