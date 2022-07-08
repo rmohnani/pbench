@@ -1202,15 +1202,10 @@ class PrelimCheck1(DiagnosticCheck):
                 for sample_name in iteration_name["4"]["buckets"]:
                     for measurement_type in sample_name["5"]["buckets"]:
                         for measurement_title in measurement_type["6"]["buckets"]:
-                            print(measurement_title["7"["buckets"]])
-                            print("---------\n")
-                            sys.exit(1)
-                            for measurement_idx in measurement_title["7"]["buckets"]:
-
-                                if len(measurement_idx["8"]["buckets"]) > 2:
+                                if len(measurement_title["7"]["buckets"]) > 2:
                                     self.run_id_valid_status[run["key"]] = False
-                                    print(measurement_idx["8"]["buckets"])
-                                    
+                                    print(measurement_title["7"]["buckets"])
+                                    sys.exit(1)
                                     break_run = True
                         if break_run is True:
                             break
