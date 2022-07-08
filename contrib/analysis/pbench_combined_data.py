@@ -1272,7 +1272,7 @@ class PrelimCheck1(DiagnosticCheck):
                                 self.run_id_valid_status[run["key"]] = False
                                 print(measurement_title["7"]["buckets"])
                                 sys.exit(1)
-                                    break_run = True
+                                break_run = True
                         if break_run is True:
                             break
                     if break_run is True:
