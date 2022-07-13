@@ -9,6 +9,7 @@ import asyncio
 
 from requests import Session
 from typing import Tuple
+from sos_collection import SosCollection
 from elasticsearch1 import Elasticsearch
 from elasticsearch1.helpers import scan
 
@@ -506,7 +507,8 @@ class PbenchCombinedDataCollection:
 
     def __init__(
         self,
-        incoming_url: str,
+        url_prefix: str,
+        sos_host_server: str,
         session: Session,
         es: Elasticsearch,
         record_limit: int,
@@ -519,7 +521,7 @@ class PbenchCombinedDataCollection:
 
         Parameters
         ----------
-        incoming_url : str
+        url_prefix : str
             pbench server url prefix to fetch unpacked data (used for fio extraction)
         session : Session
             A session to make request to url (used for fio extraction)
@@ -538,7 +540,9 @@ class PbenchCombinedDataCollection:
         # implementation for now
         self.results_seen = dict()
         self.es = es
-        self.incoming_url = incoming_url
+        self.url_prefix = url_prefix
+        self.sos_host_server = sos_host_server
+        self.incoming_url = f"{self.url_prefix}/incoming/"
         self.session = session
         self.trackers = {
             "run": dict(),
@@ -566,6 +570,7 @@ class PbenchCombinedDataCollection:
         self.ncpus = cpu_count() - 1 if cpu_n == 0 else cpu_n
         self.pool = ProcessPool(self.ncpus)
         self.pool_results = []
+        self.sos_collection = SosCollection(self.url_prefix, cpu_n, self.sos_host_server)
 
     def __str__(self) -> str:
         """Specifies how to print object
@@ -644,6 +649,9 @@ class PbenchCombinedDataCollection:
         trackers_df.to_csv(csv_folder_path + "/trackers_report.csv", sep=";", mode="w+")
         diskhost_df.to_csv(csv_folder_path + "/diskhost_names.csv", sep=";", mode="w+")
         clientname_df.to_csv(csv_folder_path + "/client_names.csv", sep=";", mode="w+")
+
+    def extract_sos_data(self, combined_data: PbenchCombinedData):
+        self.sos_collection.process_sos(combined_data)
 
     def trackers_initialization(self) -> None:
         """Initializes all diagnostic tracker values to 0.
@@ -817,6 +825,8 @@ class PbenchCombinedDataCollection:
             self.update_diagnostic_trackers(
                 associated_run.data["diagnostics"]["client_side"], "client_side"
             )
+            self.extract_sos_data(associated_run)
+            print(associated_run)
             # NOTE: though host and disk names may be marked invalid, a valid output
             #       is always given in those cases, so we will effectively always have
             #       valid hostdisk names. However client_names marked as invalid will

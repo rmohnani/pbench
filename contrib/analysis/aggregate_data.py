@@ -59,7 +59,7 @@ def main(parser: argparse.ArgumentParser) -> None:
 
     """
     args = parser.parse_args()
-    incoming_url = f"{args.url_prefix}/incoming/"
+    
 
     if args.profile_memory_usage:
         from guppy import hpy
@@ -79,7 +79,7 @@ def main(parser: argparse.ArgumentParser) -> None:
     ua = session.headers["User-Agent"]
     session.headers.update({"User-Agent": f"{ua} -- {parser.prog}"})
     pbench_data = PbenchCombinedDataCollection(
-        incoming_url, session, es, args.record_limit, args.cpu_n
+        args.url_prefix, args.sos_host_server, session, es, args.record_limit, args.cpu_n
     )
 
     scan_start = time.time()
@@ -98,10 +98,10 @@ def main(parser: argparse.ArgumentParser) -> None:
     # res = pbench_data.kibana_query_results_for_runs(_month_gen(end_time, args.start_months_prior))
     # print(res)
 
-    sos_collection = SosCollection(args.url_prefix, args.cpu_n, args.sos_host_server)
-    for id in pbench_data.run_id_to_data_valid:
-        sos_collection.process_sos(pbench_data.run_id_to_data_valid[id])
-        break
+    # sos_collection = SosCollection(args.url_prefix, args.cpu_n, args.sos_host_server)
+    # for id in pbench_data.run_id_to_data_valid:
+    #     sos_collection.process_sos(pbench_data.run_id_to_data_valid[id])
+    #     break
     
     scan_end = time.time()
     duration = scan_end - scan_start
@@ -179,7 +179,7 @@ def parse_arguments() -> argparse.ArgumentParser:
         action="store",
         dest="end_months_prior",
         type=int,
-        default=11,  # setting so have usable data for testing
+        default=12 ,  # setting so have usable data for testing
         help="Number of months prior to now at which to end data collection",
     )
     return parser
