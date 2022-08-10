@@ -11,6 +11,7 @@ sos_host=$4
 
 ./merge_sos_and_perf_parallel.py 1 $es_host $es_port $url_prefix;
 
+START="$(date +%s)"
 # 2) "sosreport_fio.txt" contains a list of all the sosreports from the past one year with pbench-fio results. Use the following command to figure out the unique set of sosreports that we should copy from the production server.
 
 sort sosreport_fio.txt | uniq > sos_fio.lis;
@@ -19,6 +20,9 @@ sort sosreport_fio.txt | uniq > sos_fio.lis;
 
 mkdir -p ./sosreports;
 while read sos; do scp vos@$sos_host:~/VoS/archive/${sos} ./sosreports/; done < sos_fio.lis;
+
+DURATION=$[ $(date +%s) - ${START} ]
+echo ${DURATION}
 
 # 4) Use "pbench_fio.json" to generate "sos_and_runids.json" using <create_sos_with_runids.py>. You could modify the code to filter out certain runs. For example, runs with multiple clients.  
 
