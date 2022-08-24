@@ -1,10 +1,9 @@
-from pathos.pools import ProcessPool
-from pathos.helpers import cpu_count
-import paramiko
 import os
-import tarfile
-import sys
 import requests
+import sys
+import tarfile
+
+import paramiko
 
 
 class SosReport:
@@ -95,7 +94,7 @@ class SosReport:
         for block in blocks[:-1]:
             if block.splitlines()[1] == "System Information":
                 for line in block.splitlines()[2:]:  # ignore first two lines
-                    parts = list(map(_strip, line.split(":", 1)))
+                    parts = list(map(self._strip, line.split(":", 1)))
                     if parts[0] == "UUID":
                         data["UUID"] = parts[1]
                         break
@@ -167,7 +166,6 @@ class SosReport:
 
                     # check if all the files needed exist and are not empty
                     if f is None or member.size == 0:
-                        isvalid = False
                         sys.stderr.write(
                             "Error: Invalid sosreport:"
                             f" {sosreport_path}:{parts[-1]}"
@@ -324,8 +322,8 @@ class SosCollection:
 
     def sync_process_sos(self, combined_data: dict):
         for sosreport in combined_data["sosreports"]:
-            if self.seen_sos_valid.get(sosreport, None) == None:
-                if self.seen_sos_invalid.get(sosreport, None) == None:
+            if self.seen_sos_valid.get(sosreport, None) is None:
+                if self.seen_sos_invalid.get(sosreport, None) is None:
                     extracted_sos_data = self.extract_sos_data(sosreport, combined_data)
                     if (
                         extracted_sos_data["download_unsuccessful"] is True

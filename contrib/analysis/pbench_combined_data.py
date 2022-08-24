@@ -1,23 +1,20 @@
 from abc import ABC, abstractmethod
-from collections import Counter, defaultdict
-import multiprocessing
-import os
-from queue import Queue
-import queue
-import pandas
 import calendar
+from collections import defaultdict
 import json
-
-from pathos.pools import ProcessPool
-from pathos.helpers import cpu_count
-from pathos.helpers import mp as pathos_multiprocess
+import os
 import time
-
-from requests import Session
 from typing import Tuple
-from sos_collection import SosCollection
+
 from elasticsearch1 import Elasticsearch
 from elasticsearch1.helpers import scan
+import pandas
+from pathos.helpers import cpu_count
+from pathos.helpers import mp as pathos_multiprocess
+from pathos.pools import ProcessPool
+from requests import Session
+
+from sos_collection import SosCollection
 
 
 class PbenchCombinedData:
@@ -424,7 +421,7 @@ class PbenchCombinedDataCollection:
         # if valid adds run to valid dict else invalid dict
         if new_run.data["diagnostics"]["run"]["valid"] is True:
             self.valid[run_id] = new_run.data
-            assert self.valid[run_id].get("diagnostics", None) != None
+            assert self.valid[run_id].get("diagnostics", None) is not None
         else:
             self.invalid["run"][run_id] = new_run.data
 
@@ -1807,7 +1804,7 @@ class ClientCount(Filter):
     def diagnostic(self, doc):
         super().diagnostic(doc)
         valid = self.run_id_valid_status.get(doc["_source"]["run"]["id"], None)
-        if valid == None:
+        if valid is None:
             self.diagnostic_return["run_not_in_result"] = True
             self.issues = True
         else:
